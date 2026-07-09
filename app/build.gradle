@@ -193,5 +193,10 @@ dependencies {
 //    implementation 'com.google.android.gms:play-services-cronet:18.0.1'
     implementation ('org.chromium.net:cronet-embedded:101.4951.41')
     implementation 'org.brotli:dec:0.1.2'
+
+    // 用于解压 assrt 下发的 RAR 字幕包
+    implementation('com.github.junrar:junrar:7.5.4') {
+        exclude group: 'org.apache.commons', module: 'commons-logging'
+    }
 }
 
