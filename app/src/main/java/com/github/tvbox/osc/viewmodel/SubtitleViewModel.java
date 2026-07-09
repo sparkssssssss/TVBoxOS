@@ -194,9 +194,10 @@ public class SubtitleViewModel extends ViewModel {
     }
 
     private void getSubtitleUrlFromAssrt(Subtitle subtitle, SearchSubtitleDialog.SubtitleLoader subtitleLoader) {
+        final String originalUrl = subtitle.getUrl();
         String ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.54 Safari/537.36";
         Request request = new Request.Builder()
-                .url(subtitle.getUrl())
+                .url(originalUrl)
                 .get()
                 .addHeader("Referer", "https://secure.assrt.net")
                 .addHeader("User-Agent", ua)
@@ -214,12 +215,37 @@ public class SubtitleViewModel extends ViewModel {
             @Override
             public void onFailure(Call call, IOException e) {
                 e.printStackTrace();
+                // 网络失败时直接回退用原始 url 让 SubtitleLoader 再试一次
+                subtitle.setUrl(originalUrl);
+                subtitleLoader.loadSubtitle(subtitle);
             }
 
             @Override
             public void onResponse(Call call, Response response) throws IOException {
-                subtitle.setUrl(response.header("location"));
-                subtitleLoader.loadSubtitle(subtitle);
+                try {
+                    int code = response.code();
+                    String location = response.header("location");
+                    // 3xx 重定向：取 Location 作为真实下载地址
+                    if (code >= 300 && code < 400 && !TextUtils.isEmpty(location)) {
+                        subtitle.setUrl(location);
+                    } else if (code == 200) {
+                        // 服务器直接返回文件内容，没有重定向：沿用原始 url
+                        // （SubtitleLoader.loadFromRemote 会再次下载解析）
+                        subtitle.setUrl(originalUrl);
+                    } else {
+                        // 其它情况（403/404 等）也回退原始 url 尝试一次
+                        subtitle.setUrl(originalUrl);
+                    }
+                    subtitleLoader.loadSubtitle(subtitle);
+                } catch (Throwable th) {
+                    th.printStackTrace();
+                    subtitle.setUrl(originalUrl);
+                    subtitleLoader.loadSubtitle(subtitle);
+                } finally {
+                    if (response != null) {
+                        try { response.close(); } catch (Throwable ignored) {}
+                    }
+                }
             }
         });
     }
