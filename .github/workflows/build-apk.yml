@@ -1,0 +1,91 @@
+name: Build APK
+
+# 触发方式：push 到 main / 手动
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. 拉取当前仓库代码
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # 2. 配置 JDK 17（AGP 7.2.2 + Gradle 7.5 可用 17）
+      - name: Set up JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      # 3. 配置 Gradle（带缓存，加速后续构建）
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      # 4. 注入签名配置（复用仓库自带的 TVBoxOSC.jks，密码统一为 TVBoxOSC）
+      - name: Inject Signing Config
+        run: |
+          SIGNING_CONFIGS=$(cat <<'EOF'
+          signingConfigs {
+              if (project.hasProperty("RELEASE_STORE_FILE")) {
+                  myConfig {
+                      storeFile file(RELEASE_STORE_FILE)
+                      storePassword RELEASE_STORE_PASSWORD
+                      keyAlias RELEASE_KEY_ALIAS
+                      keyPassword RELEASE_KEY_PASSWORD
+                      v1SigningEnabled true
+                      v2SigningEnabled true
+                      enableV3Signing = true
+                      enableV4Signing = true
+                  }
+              }
+          }
+          EOF
+          )
+          SIGNING_REF=$(cat <<'EOF'
+                      if (project.hasProperty("RELEASE_STORE_FILE")) {
+                          signingConfig signingConfigs.myConfig
+                      }
+          EOF
+          )
+          sed -i -e "/defaultConfig {/i\\$SIGNING_CONFIGS " \
+                 -e "/debug {/a\\$SIGNING_REF " \
+                 -e "/release {/a\\$SIGNING_REF " app/build.gradle
+          cp -f .github/workflows/TVBoxOSC.jks app/TVBoxOSC.jks
+          {
+            echo "RELEASE_STORE_FILE=./TVBoxOSC.jks"
+            echo "RELEASE_KEY_ALIAS=TVBoxOSC"
+            echo "RELEASE_STORE_PASSWORD=TVBoxOSC"
+            echo "RELEASE_KEY_PASSWORD=TVBoxOSC"
+          } >> gradle.properties
+          sed -i 's/^#\(org.gradle.jvmargs=.*\)/\1/' gradle.properties
+
+      # 5. 只编译 python32 release APK
+      - name: Build python32 Release APK
+        run: |
+          chmod +x gradlew
+          ./gradlew assemblePython32Release --build-cache --parallel --daemon
+
+      # 6. 收集 APK 并重命名
+      - name: Collect & Rename APK
+        run: |
+          mkdir -p apk/
+          TAG=$(git log --date=format:'%Y%m%d-%H%M' --pretty=format:%cd -1)
+          SHORT=$(git rev-parse --short HEAD)
+          cp app/build/outputs/apk/python32/release/*.apk "apk/TVBox_python32_${TAG}_${SHORT}.apk"
+          ls -lh apk/
+
+      # 7. 上传为 Artifact（从 Actions 页面下载）
+      - name: Upload APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: TVBox-python32-${{ github.run_number }}
+          path: apk/*.apk
+          retention-days: 30
