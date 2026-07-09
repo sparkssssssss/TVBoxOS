@@ -26,6 +26,18 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
+      # 3.5 准备 Python（pyramid 模块的 Chaquopy 插件需要）
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.8'
+
+      # 3.6 创建 local.properties（Chaquopy 配置阶段会读这个文件，CI 上不存在）
+      - name: Create local.properties
+        run: |
+          echo "sdk.dir=${ANDROID_HOME}" > local.properties
+          cat local.properties
+
       # 4. 注入签名配置（复用仓库自带的 TVBoxOSC.jks，密码统一为 TVBoxOSC）
       #    用 base64 编码避免 sed 多行插入的续行问题（每行末尾带 \ 续行）
       - name: Inject Signing Config
@@ -45,6 +57,15 @@ jobs:
           sed -i 's/^#\(org.gradle.jvmargs=.*\)/\1/' gradle.properties
           # 打印前 40 行确认签名块已插入
           head -40 app/build.gradle
+
+      # 4.5 覆盖 pyramid 模块里硬编码的 Windows python 路径，指向 CI 的 python3
+      - name: Override buildPython path
+        run: |
+          PYBIN=$(which python3)
+          echo "CI python: $PYBIN"
+          python3 --version
+          sed -i "s#buildPython(\"D:/Programs/Python/Python38/python.exe\")#buildPython(\"$PYBIN\")#" pyramid/build.gradle
+          grep buildPython pyramid/build.gradle
 
       # 5. 只编译 python32 release APK
       - name: Build python32 Release APK
