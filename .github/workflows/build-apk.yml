@@ -27,34 +27,14 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
 
       # 4. 注入签名配置（复用仓库自带的 TVBoxOSC.jks，密码统一为 TVBoxOSC）
+      #    用 base64 编码避免 sed 多行插入的续行问题（每行末尾带 \ 续行）
       - name: Inject Signing Config
         run: |
-          SIGNING_CONFIGS=$(cat <<'EOF'
-          signingConfigs {
-              if (project.hasProperty("RELEASE_STORE_FILE")) {
-                  myConfig {
-                      storeFile file(RELEASE_STORE_FILE)
-                      storePassword RELEASE_STORE_PASSWORD
-                      keyAlias RELEASE_KEY_ALIAS
-                      keyPassword RELEASE_KEY_PASSWORD
-                      v1SigningEnabled true
-                      v2SigningEnabled true
-                      enableV3Signing = true
-                      enableV4Signing = true
-                  }
-              }
-          }
-          EOF
-          )
-          SIGNING_REF=$(cat <<'EOF'
-                      if (project.hasProperty("RELEASE_STORE_FILE")) {
-                          signingConfig signingConfigs.myConfig
-                      }
-          EOF
-          )
-          sed -i -e "/defaultConfig {/i\\$SIGNING_CONFIGS " \
-                 -e "/debug {/a\\$SIGNING_REF " \
-                 -e "/release {/a\\$SIGNING_REF " app/build.gradle
+          signingConfigs='ICAgIHNpZ25pbmdDb25maWdzIHtcCiAgICAgICAgaWYgKHByb2plY3QuaGFzUHJvcGVydHkoIlJFTEVBU0VfU1RPUkVfRklMRSIpKSB7XAogICAgICAgICAgICBteUNvbmZpZyB7XAogICAgICAgICAgICAgICAgc3RvcmVGaWxlIGZpbGUoUkVMRUFTRV9TVE9SRV9GSUxFKVwKICAgICAgICAgICAgICAgIHN0b3JlUGFzc3dvcmQgUkVMRUFTRV9TVE9SRV9QQVNTV09SRFwKICAgICAgICAgICAgICAgIGtleUFsaWFzIFJFTEVBU0VfS0VZX0FMSUFTXAogICAgICAgICAgICAgICAga2V5UGFzc3dvcmQgUkVMRUFTRV9LRVlfUEFTU1dPUkRcCiAgICAgICAgICAgICAgICB2MVNpZ25pbmdFbmFibGVkIHRydWVcCiAgICAgICAgICAgICAgICB2MlNpZ25pbmdFbmFibGVkIHRydWVcCiAgICAgICAgICAgICAgICBlbmFibGVWM1NpZ25pbmcgPSB0cnVlXAogICAgICAgICAgICAgICAgZW5hYmxlVjRTaWduaW5nID0gdHJ1ZVwKICAgICAgICAgICAgfVwKICAgICAgICB9XAogICAgfVwKXA=='
+          signingConfig='ICAgICAgICAgICAgaWYgKHByb2plY3QuaGFzUHJvcGVydHkoIlJFTEVBU0VfU1RPUkVfRklMRSIpKSB7XAogICAgICAgICAgICAgICAgc2lnbmluZ0NvbmZpZyBzaWduaW5nQ29uZmlncy5teUNvbmZpZ1wKICAgICAgICAgICAgfVwK'
+          signingConfigs="$(echo "$signingConfigs" |base64 -d )"
+          signingConfig="$(echo "$signingConfig" |base64 -d )"
+          sed -i -e "/defaultConfig {/i\\$signingConfigs " -e "/debug {/a\\$signingConfig " -e "/release {/a\\$signingConfig " app/build.gradle
           cp -f .github/workflows/TVBoxOSC.jks app/TVBoxOSC.jks
           {
             echo "RELEASE_STORE_FILE=./TVBoxOSC.jks"
@@ -63,6 +43,8 @@ jobs:
             echo "RELEASE_KEY_PASSWORD=TVBoxOSC"
           } >> gradle.properties
           sed -i 's/^#\(org.gradle.jvmargs=.*\)/\1/' gradle.properties
+          # 打印前 40 行确认签名块已插入
+          head -40 app/build.gradle
 
       # 5. 只编译 python32 release APK
       - name: Build python32 Release APK
