@@ -1,10 +1,7 @@
 name: Build APK
 
-# 触发方式：push 到 main / 手动
+# 触发方式：仅手动触发
 on:
-  push:
-    branches:
-      - main
   workflow_dispatch:
 
 jobs:
