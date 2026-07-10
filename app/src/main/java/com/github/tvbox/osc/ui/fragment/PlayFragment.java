@@ -155,7 +155,14 @@ public class PlayFragment extends BaseLazyFragment {
         if (event.type == RefreshEvent.TYPE_SET_DANMU_SETTINGS) {
             setDanmuViewSettings(event.obj instanceof Boolean && (Boolean) event.obj);
         } else if (event.type == RefreshEvent.TYPE_DANMU_REFRESH) {
-            checkDanmu(event.obj instanceof String ? (String) event.obj : "");
+            String danmu = event.obj instanceof String ? ((String) event.obj).trim() : "";
+            if (!TextUtils.isEmpty(danmu)) {
+                LOG.i("echo-danmu refresh from external path: " + danmu);
+                checkDanmu(danmu);
+            } else {
+                checkDanmu("");
+                searchDanmu("");
+            }
         }
     }
 
@@ -834,7 +841,6 @@ public class PlayFragment extends BaseLazyFragment {
                         }
                         String flag = info.optString("flag");
                         String url = info.getString("url");
-                        String danmaku = info.optString("danmaku", "");
                         if(url.startsWith("[")){
                             url=mController.firstUrlByArray(url);
                         }
@@ -856,7 +862,7 @@ public class PlayFragment extends BaseLazyFragment {
                         }
                         // Ignore danmaku returned by Jar and always use configured DanmakuApi/LogVar API.
                         checkDanmu("");
-                        searchDanmu(danmaku);
+                        searchDanmu("");
                     } catch (Throwable th) {
                         handleResolvePlayUrlFailed("获取播放信息错误", true);
                     }
@@ -868,8 +874,8 @@ public class PlayFragment extends BaseLazyFragment {
         });
     }
 
-    private void searchDanmu(String danmaku) {
-        // Jar may return a non-empty but empty-result danmaku proxy URL. Always search via configured DanmakuApi.
+    private void searchDanmu(String ignoredDanmaku) {
+        // Jar may return a non-empty but empty-result danmaku proxy URL. Ignore it and always search via configured DanmakuApi.
         if (!DanmakuApi.canSearch() || mVodInfo == null) return;
         VodInfo.VodSeries series = getCurrentSeries(mVodInfo.playFlag, mVodInfo.playIndex);
         String key = progressKey;
