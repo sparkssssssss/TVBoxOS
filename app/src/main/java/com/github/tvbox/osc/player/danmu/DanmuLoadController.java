@@ -32,6 +32,7 @@ public class DanmuLoadController {
     private String danmuEpisode = "";
     private int startedSeq = -1;
     private boolean pendingPrepare;
+    private boolean autoSearchAttempted;
 
     public DanmuLoadController(MyVideoView videoView, VodController controller, DanmakuView danmuView) {
         this.videoView = videoView;
@@ -76,6 +77,7 @@ public class DanmuLoadController {
         danmuText = TextUtils.isEmpty(danmu) ? "" : danmu.trim();
         danmuTitle = TextUtils.isEmpty(title) ? "" : title;
         danmuEpisode = TextUtils.isEmpty(episode) ? "" : episode;
+        autoSearchAttempted = false;
         releaseView();
         boolean hasDanmu = !TextUtils.isEmpty(danmuText);
         if (controller != null) controller.setHasDanmu(hasDanmu);
@@ -106,6 +108,7 @@ public class DanmuLoadController {
         danmuTitle = "";
         danmuEpisode = "";
         pendingPrepare = false;
+        autoSearchAttempted = false;
         loadSeq.incrementAndGet();
         startedSeq = -1;
         if (controller != null) controller.setHasDanmu(false);
@@ -143,6 +146,7 @@ public class DanmuLoadController {
                     if (danmuCount <= 0) {
                         LOG.e("echo-danmu empty after parse");
                         danmuView.setVisibility(View.GONE);
+                        searchWhenEmpty(seq, danmu);
                         return;
                     }
                     danmuView.prepare(parser, danmakuContext);
@@ -155,6 +159,38 @@ public class DanmuLoadController {
                     danmuView.setVisibility(View.GONE);
                 }
             });
+        });
+    }
+
+    private void searchWhenEmpty(int seq, String failedDanmu) {
+        if (seq != loadSeq.get() || autoSearchAttempted || !DanmakuApi.canSearch() || TextUtils.isEmpty(danmuTitle)) return;
+        autoSearchAttempted = true;
+        final String title = danmuTitle;
+        final String episode = danmuEpisode;
+        LOG.i("echo-danmu empty fallback search title: " + safeLog(title) + ", episode: " + safeLog(episode) + ", failed source: " + getSourceSummary(failedDanmu));
+        DanmakuApi.search(title, episode, new DanmakuApi.SearchCallback() {
+            @Override
+            public void onFound(String url) {
+                if (seq != loadSeq.get() || TextUtils.isEmpty(url)) return;
+                LOG.i("echo-danmu empty fallback found: " + getSourceSummary(url));
+                danmuText = url.trim();
+                danmuTitle = title;
+                danmuEpisode = episode;
+                if (controller != null) controller.setHasDanmu(true);
+                if (danmuView != null) danmuView.setVisibility(View.VISIBLE);
+                if (!isVideoReady()) {
+                    pendingPrepare = true;
+                    return;
+                }
+                prepare(danmuText);
+            }
+
+            @Override
+            public void onNotFound() {
+                if (seq != loadSeq.get()) return;
+                LOG.e("echo-danmu empty fallback not found");
+                if (controller != null) controller.setHasDanmu(false);
+            }
         });
     }
 
