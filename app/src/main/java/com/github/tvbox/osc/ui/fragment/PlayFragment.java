@@ -854,7 +854,8 @@ public class PlayFragment extends BaseLazyFragment {
                             mController.showParse(false);
                             playUrl(playUrl + url, headers);
                         }
-                        checkDanmu(danmaku);
+                        // Ignore danmaku returned by Jar and always use configured DanmakuApi/LogVar API.
+                        checkDanmu("");
                         searchDanmu(danmaku);
                     } catch (Throwable th) {
                         handleResolvePlayUrlFailed("获取播放信息错误", true);
@@ -868,7 +869,8 @@ public class PlayFragment extends BaseLazyFragment {
     }
 
     private void searchDanmu(String danmaku) {
-        if (!TextUtils.isEmpty(danmaku) || !DanmakuApi.canSearch() || mVodInfo == null) return;
+        // Jar may return a non-empty but empty-result danmaku proxy URL. Always search via configured DanmakuApi.
+        if (!DanmakuApi.canSearch() || mVodInfo == null) return;
         VodInfo.VodSeries series = getCurrentSeries(mVodInfo.playFlag, mVodInfo.playIndex);
         String key = progressKey;
         DanmakuApi.search(mVodInfo.name, series == null ? "" : series.name, new DanmakuApi.SearchCallback() {
