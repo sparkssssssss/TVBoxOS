@@ -951,16 +951,19 @@ public class VodController extends BaseController {
     public void setHasDanmu(boolean hasDanmu) {
         this.hasDanmu = hasDanmu;
         updateDanmuBtn();
+        updateDanmuSearchUiBtn();
     }
 
     public void updateDanmuBtn() {
         if (mDanmuSettingBtn == null) return;
+        // 有弹幕时显示“弹幕”按钮用于设置参数；没弹幕时隐藏，改露出“弹幕搜索”。
         mDanmuSettingBtn.setVisibility(hasDanmu ? VISIBLE : GONE);
     }
 
     public void updateDanmuSearchUiBtn() {
         if (mDanmuSearchUiBtn == null) return;
-        mDanmuSearchUiBtn.setVisibility(ApiConfig.get().hasDanmuSearchUi() ? VISIBLE : GONE);
+        // 只有当前没加载到弹幕时，才露出“弹幕搜索”入口，方便用户手动补弹幕。
+        mDanmuSearchUiBtn.setVisibility(!hasDanmu && ApiConfig.get().hasDanmuSearchUi() ? VISIBLE : GONE);
     }
 
     public interface VodControlListener {
