@@ -870,7 +870,10 @@ public class PlayFragment extends BaseLazyFragment {
             checkDanmu(externalDanmaku);
             return;
         }
-        if (!DanmakuApi.canSearch() || mVodInfo == null) return;
+        if (!DanmakuApi.canSearch() || mVodInfo == null) {
+            checkDanmu("");
+            return;
+        }
         VodInfo.VodSeries series = getCurrentSeries(mVodInfo.playFlag, mVodInfo.playIndex);
         String key = progressKey;
         DanmakuApi.search(mVodInfo.name, series == null ? "" : series.name, new DanmakuApi.SearchCallback() {
