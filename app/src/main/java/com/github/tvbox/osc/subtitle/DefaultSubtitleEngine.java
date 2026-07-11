@@ -87,23 +87,16 @@ public class DefaultSubtitleEngine implements SubtitleEngine {
             @Override
             public void onSuccess(final SubtitleLoadSuccessResult subtitleLoadSuccessResult) {
                 if (subtitleLoadSuccessResult == null) {
-                    Log.d(TAG, "onSuccess: subtitleLoadSuccessResult is null.");
                     return;
                 }
                 if (subtitleLoadSuccessResult.timedTextObject == null) {
-                    Log.d(TAG, "onSuccess: timedTextObject is null.");
                     return;
                 }
                 final TreeMap<Integer, Subtitle> captions = subtitleLoadSuccessResult.timedTextObject.captions;
                 if (captions == null) {
-                    Log.d(TAG, "onSuccess: captions is null.");
                     return;
                 }
                 mSubtitles = new ArrayList<>(captions.values());
-                Log.d(TAG, "onSuccess: captions.size=" + mSubtitles.size()
-                        + " first=" + (mSubtitles.isEmpty() ? "-" : mSubtitles.get(0).start.mseconds)
-                        + " last=" + (mSubtitles.isEmpty() ? "-" : mSubtitles.get(mSubtitles.size() - 1).end.mseconds)
-                        + " mediaPlayer=" + (mMediaPlayer == null ? "null" : mMediaPlayer.getClass().getSimpleName()));
                 setSubtitleDelay(SubtitleHelper.getTimeDelay());
                 notifyPrepared();
 
@@ -178,9 +171,6 @@ public class DefaultSubtitleEngine implements SubtitleEngine {
 
     @Override
     public void start() {
-        Log.d(TAG, "start: mediaPlayer=" + (mMediaPlayer == null ? "null" : mMediaPlayer.getClass().getSimpleName())
-                + " mainHandler=" + (mMainHandler == null ? "null" : "ok")
-                + " subs=" + (mSubtitles == null ? 0 : mSubtitles.size()));
         if (mMediaPlayer == null) {
             Log.w(TAG, "MediaPlayer is not bind, You must bind MediaPlayer to "
                     + SubtitleEngine.class.getSimpleName()
@@ -215,10 +205,8 @@ public class DefaultSubtitleEngine implements SubtitleEngine {
 
     @Override
     public void destroy() {
-        Log.d(TAG, "destroy: ");
         stopWorkThread();
         reset();
-
     }
 
     private void initWorkThread() {
@@ -234,15 +222,10 @@ public class DefaultSubtitleEngine implements SubtitleEngine {
                     if (mMediaPlayer != null && mMediaPlayer.isPlaying()) {
                         long position = mMediaPlayer.getCurrentPosition();
                         Subtitle subtitle = SubtitleFinder.find(position, mSubtitles);
-                        if (subtitle != null) {
-                            Log.d(TAG, "tick: pos=" + position + " sub=[" + subtitle.start.mseconds + "," + subtitle.end.mseconds + "] content=" + subtitle.content);
-                            delay = subtitle.end.mseconds - position;
-                        } else {
-                            Log.d(TAG, "tick: pos=" + position + " sub=null (no caption at this time) subs=" + (mSubtitles == null ? 0 : mSubtitles.size()));
-                        }
                         notifyRefreshUI(subtitle);
-                    } else {
-                        Log.d(TAG, "tick: skip, mediaPlayer=" + (mMediaPlayer == null ? "null" : (mMediaPlayer.isPlaying() ? "playing" : "notPlaying")));
+                        if (subtitle != null) {
+                            delay = subtitle.end.mseconds - position;
+                        }
                     }
                     if (mMainHandler != null) {
                         mMainHandler.sendEmptyMessageDelayed(MSG_REFRESH, delay);
