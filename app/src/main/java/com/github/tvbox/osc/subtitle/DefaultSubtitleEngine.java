@@ -26,7 +26,7 @@
 package com.github.tvbox.osc.subtitle;
 
 import android.os.Handler;
-import android.os.HandlerThread;
+import android.os.Looper;
 import android.os.Message;
 import androidx.annotation.Nullable;
 import android.text.TextUtils;
@@ -57,9 +57,7 @@ public class DefaultSubtitleEngine implements SubtitleEngine {
     private static final int REFRESH_INTERVAL = 100;
 
     @Nullable
-    private HandlerThread mHandlerThread;
-    @Nullable
-    private Handler mWorkHandler;
+    private Handler mMainHandler;
     @Nullable
     private List<Subtitle> mSubtitles;
     private UIRenderTask mUIRenderTask;
@@ -181,7 +179,7 @@ public class DefaultSubtitleEngine implements SubtitleEngine {
     @Override
     public void start() {
         Log.d(TAG, "start: mediaPlayer=" + (mMediaPlayer == null ? "null" : mMediaPlayer.getClass().getSimpleName())
-                + " workHandler=" + (mWorkHandler == null ? "null" : "ok")
+                + " mainHandler=" + (mMainHandler == null ? "null" : "ok")
                 + " subs=" + (mSubtitles == null ? 0 : mSubtitles.size()));
         if (mMediaPlayer == null) {
             Log.w(TAG, "MediaPlayer is not bind, You must bind MediaPlayer to "
@@ -192,8 +190,8 @@ public class DefaultSubtitleEngine implements SubtitleEngine {
             return;
         }
         stop();
-        if (mWorkHandler != null) {
-            mWorkHandler.sendEmptyMessageDelayed(MSG_REFRESH, REFRESH_INTERVAL);
+        if (mMainHandler != null) {
+            mMainHandler.sendEmptyMessageDelayed(MSG_REFRESH, REFRESH_INTERVAL);
         }
 
     }
@@ -210,8 +208,8 @@ public class DefaultSubtitleEngine implements SubtitleEngine {
 
     @Override
     public void stop() {
-        if (mWorkHandler != null) {
-            mWorkHandler.removeMessages(MSG_REFRESH);
+        if (mMainHandler != null) {
+            mMainHandler.removeMessages(MSG_REFRESH);
         }
     }
 
@@ -225,9 +223,10 @@ public class DefaultSubtitleEngine implements SubtitleEngine {
 
     private void initWorkThread() {
         stopWorkThread();
-        mHandlerThread = new HandlerThread("SubtitleFindThread");
-        mHandlerThread.start();
-        mWorkHandler = new Handler(mHandlerThread.getLooper(), new Handler.Callback() {
+        // 刷新循环必须跑在主线程：ExoPlayer 的 isPlaying()/getCurrentPosition()
+        // 会做线程校验，子线程访问会抛 IllegalStateException 导致循环终止、字幕不显示。
+        // SubtitleFinder.find 是纯内存二分查找，主线程执行不会卡顿。
+        mMainHandler = new Handler(Looper.getMainLooper(), new Handler.Callback() {
             @Override
             public boolean handleMessage(final Message msg) {
                 try {
@@ -245,8 +244,8 @@ public class DefaultSubtitleEngine implements SubtitleEngine {
                     } else {
                         Log.d(TAG, "tick: skip, mediaPlayer=" + (mMediaPlayer == null ? "null" : (mMediaPlayer.isPlaying() ? "playing" : "notPlaying")));
                     }
-                    if (mWorkHandler != null) {
-                        mWorkHandler.sendEmptyMessageDelayed(MSG_REFRESH, delay);
+                    if (mMainHandler != null) {
+                        mMainHandler.sendEmptyMessageDelayed(MSG_REFRESH, delay);
                     }
                 } catch (Exception e) {
                     Log.e(TAG, "tick: exception", e);
@@ -257,13 +256,9 @@ public class DefaultSubtitleEngine implements SubtitleEngine {
     }
 
     private void stopWorkThread() {
-        if (mHandlerThread != null) {
-            mHandlerThread.quit();
-            mHandlerThread = null;
-        }
-        if (mWorkHandler != null) {
-            mWorkHandler.removeCallbacksAndMessages(null);
-            mWorkHandler = null;
+        if (mMainHandler != null) {
+            mMainHandler.removeCallbacksAndMessages(null);
+            mMainHandler = null;
         }
     }
 
