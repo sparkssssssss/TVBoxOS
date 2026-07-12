@@ -178,8 +178,7 @@ public class PlayFragment extends BaseLazyFragment {
 
     private void checkDanmu(String danmu) {
         if (danmuLoadController != null) {
-            VodInfo.VodSeries series = mVodInfo == null ? null : getCurrentSeries(mVodInfo.playFlag, mVodInfo.playIndex);
-            danmuLoadController.check(danmu, mVodInfo == null ? "" : mVodInfo.name, series == null ? "" : series.name);
+            danmuLoadController.check(danmu, mVodInfo == null ? "" : mVodInfo.name, getCurrentDanmuEpisode());
         }
     }
 
@@ -281,8 +280,7 @@ public class PlayFragment extends BaseLazyFragment {
 
             @Override
             public void searchDanmuUi(boolean longClick) {
-                VodInfo.VodSeries series = mVodInfo == null ? null : getCurrentSeries(mVodInfo.playFlag, mVodInfo.playIndex);
-                ApiConfig.get().searchDanmuUi(mVodInfo == null ? "" : mVodInfo.name, series == null ? "" : series.name, longClick);
+                ApiConfig.get().searchDanmuUi(mVodInfo == null ? "" : mVodInfo.name, getCurrentDanmuEpisode(), longClick);
             }
 
             @Override
@@ -874,9 +872,9 @@ public class PlayFragment extends BaseLazyFragment {
             checkDanmu("");
             return;
         }
-        VodInfo.VodSeries series = getCurrentSeries(mVodInfo.playFlag, mVodInfo.playIndex);
+        String episode = getCurrentDanmuEpisode();
         String key = progressKey;
-        DanmakuApi.search(mVodInfo.name, series == null ? "" : series.name, new DanmakuApi.SearchCallback() {
+        DanmakuApi.search(mVodInfo.name, episode, new DanmakuApi.SearchCallback() {
             @Override
             public void onFound(String url) {
                 if (!TextUtils.equals(key, progressKey)) return;
@@ -1245,6 +1243,18 @@ public class PlayFragment extends BaseLazyFragment {
         }
         int safeIndex = Math.max(0, Math.min(index, currentList.size() - 1));
         return currentList.get(safeIndex);
+    }
+
+    private String getCurrentDanmuEpisode() {
+        if (mVodInfo == null) return "";
+        VodInfo.VodSeries series = getCurrentSeries(mVodInfo.playFlag, mVodInfo.playIndex);
+        int parsedEpisode = series == null ? -1 : extractEpisodeNumber(series.name);
+        if (isValidDanmuEpisodeNumber(parsedEpisode)) return String.valueOf(parsedEpisode);
+        return String.valueOf(Math.max(0, mVodInfo.playIndex) + 1);
+    }
+
+    private boolean isValidDanmuEpisodeNumber(int episode) {
+        return episode > 0 && episode <= 10000;
     }
 
     private int findSameEpisodeIndex(VodInfo.VodSeries currentSeries, List<VodInfo.VodSeries> targetList, int fallbackIndex) {
