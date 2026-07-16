@@ -1299,21 +1299,35 @@ public class PlayFragment extends BaseLazyFragment {
         if (name == null) {
             return -1;
         }
-        Matcher episodeMatcher = Pattern.compile("(?:第)?(\\d+)(?:集|话|期|$)").matcher(name);
-        if (episodeMatcher.find()) {
-            try {
-                return Integer.parseInt(episodeMatcher.group(1));
-            } catch (NumberFormatException ignored) {
-            }
+        String text = name.trim();
+        if (TextUtils.isEmpty(text)) {
+            return -1;
         }
-        Matcher matcher = Pattern.compile("\\d+").matcher(name);
-        if (matcher.find()) {
-            try {
-                return Integer.parseInt(matcher.group());
-            } catch (NumberFormatException ignored) {
-            }
+
+        Matcher markedEpisodeMatcher = Pattern.compile("(?:第|EP|Ep|ep|episode|Episode|E)(\\d{1,5})(?:集|话|期)?").matcher(text);
+        if (markedEpisodeMatcher.find()) {
+            return parseEpisodeNumber(markedEpisodeMatcher.group(1));
+        }
+
+        String withoutExt = text.replaceAll("(?i)\\.(mp4|mkv|avi|mov|wmv|flv|m3u8|ts|rmvb|webm)$", "").trim();
+        Matcher fileTailEpisodeMatcher = Pattern.compile("(?:^|[^0-9A-Za-z])(\\d{1,4})\\s*$").matcher(withoutExt);
+        if (fileTailEpisodeMatcher.find()) {
+            return parseEpisodeNumber(fileTailEpisodeMatcher.group(1));
+        }
+
+        Matcher plainNumberMatcher = Pattern.compile("^0*(\\d{1,5})$").matcher(text);
+        if (plainNumberMatcher.find()) {
+            return parseEpisodeNumber(plainNumberMatcher.group(1));
         }
         return -1;
+    }
+
+    private int parseEpisodeNumber(String number) {
+        try {
+            return Integer.parseInt(number);
+        } catch (NumberFormatException ignored) {
+            return -1;
+        }
     }
 
     void autoRetryFromLoadFoundVideoUrls() {
