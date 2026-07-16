@@ -1310,7 +1310,8 @@ public class PlayFragment extends BaseLazyFragment {
         }
 
         String withoutExt = text.replaceAll("(?i)\\.(mp4|mkv|avi|mov|wmv|flv|m3u8|ts|rmvb|webm)$", "").trim();
-        Matcher fileTailEpisodeMatcher = Pattern.compile("(?:^|[^0-9A-Za-z])(\\d{1,4})\\s*$").matcher(withoutExt);
+        String withoutQualitySuffix = withoutExt.replaceAll("(?i)(?:[._\\-\\s]*(?:4k|8k|2160p|1080p|720p|480p|360p|hdr|dolby|x264|x265|h264|h265|hevc|avc))+$", "").trim();
+        Matcher fileTailEpisodeMatcher = Pattern.compile("(?:^|[^0-9A-Za-z])(\\d{1,4})\\s*$").matcher(withoutQualitySuffix);
         if (fileTailEpisodeMatcher.find()) {
             return parseEpisodeNumber(fileTailEpisodeMatcher.group(1));
         }
