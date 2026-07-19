@@ -195,7 +195,8 @@ public class DanmakuApi {
     }
 
     private static void searchBuiltinAnime(String baseUrl, String name, String episode, SearchCallback callback, int seq, boolean notifyOnEmpty) {
-        final String searchUrl = baseUrl + "/api/v2/search/anime?keyword=" + encode(name);
+        String keyword = buildAnimeSearchKeyword(name);
+        final String searchUrl = baseUrl + "/api/v2/search/anime?keyword=" + encode(keyword);
         LOG.i("echo-danmaku builtin search anime: " + searchUrl);
         OkHttp.newCall(OkHttp.client(BUILTIN_TIMEOUT), searchUrl, TAG).enqueue(new Callback() {
             @Override
@@ -345,6 +346,17 @@ public class DanmakuApi {
         if (url.endsWith("/")) url = url.substring(0, url.length() - 1);
         if (url.endsWith("/87654321")) url = url.substring(0, url.length() - "/87654321".length());
         return url;
+    }
+
+    private static String buildAnimeSearchKeyword(String name) {
+        String text = Trans.t2s(name == null ? "" : name).trim();
+        if (TextUtils.isEmpty(text)) return "";
+        text = text.replaceAll("\\s+", " ");
+        text = text.replaceAll("(?i)(?:\\s*[-_./]?[\\[\\]【】()（）]*\\s*年番\\d*\\s*)+$", "").trim();
+        text = text.replaceAll("(?i)(?:\\s*[-_./]?[\\[\\]【】()（）]*\\s*(?:4k|8k|2160p|1080p|720p|480p|360p|hdr|dolby|x264|x265|h264|h265|hevc|avc)\\s*)+$", "").trim();
+        text = text.replaceAll("[\\[\\]【】()（）]", " ").trim();
+        text = text.replaceAll("\\s+", " ").trim();
+        return text;
     }
 
     private static String encode(String text) {
@@ -506,6 +518,14 @@ public class DanmakuApi {
 
     private static boolean isCantoneseTitle(String title) {
         return !TextUtils.isEmpty(title) && title.contains("\u7ca4\u8bed");
+    }
+
+    private static boolean isFilteredTitle(String title) {
+        if (TextUtils.isEmpty(title)) return false;
+        String text = Trans.t2s(title).trim();
+        if (TextUtils.isEmpty(text)) return false;
+        return text.matches(".*(?:广告|预告|无关剧名|臻彩|4k|4K|年番|年番\\d+).*"
+        );
     }
 
     private static boolean prefersCantonese(String episode) {

@@ -916,7 +916,6 @@ public class PlayFragment extends BaseLazyFragment {
                         String flag = info.optString("flag");
                         String url = info.getString("url");
                         String danmaku = info.optString("danmaku", "");
-                        if (DanmakuApi.hasCustomApi()) danmaku = "";
                         final String danmuProgressKey = progressKey;
                         boolean fallbackToDefaultSearch = DanmakuApi.isUseDefault() && danmaku.trim().startsWith("http");
                         if(url.startsWith("[")){
