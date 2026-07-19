@@ -204,7 +204,7 @@ public class DanmakuApi {
                 if (!isCurrentSearch(seq)) return;
                 try {
                     String body = response.body() == null ? "" : response.body().string();
-                    String animeId = findAnimeId(body);
+                    String animeId = findAnimeId(body, episode);
                     if (TextUtils.isEmpty(animeId)) {
                         if (notifyOnEmpty) notifyNotFound(callback, seq);
                         return;
@@ -356,17 +356,28 @@ public class DanmakuApi {
         return -1;
     }
 
-    private static String findAnimeId(String body) throws Exception {
+    private static String findAnimeId(String body, String episode) throws Exception {
         JSONObject object = new JSONObject(body);
         JSONArray array = object.optJSONArray("animes");
         if (array == null) array = object.optJSONArray("anime");
         if (array == null) array = object.optJSONArray("data");
         if (array == null || array.length() <= 0) return "";
-        JSONObject item = array.optJSONObject(0);
-        if (item == null) return "";
-        String id = item.optString("animeId", "");
-        if (TextUtils.isEmpty(id)) id = item.optString("id", "");
-        return id;
+        int targetNumber = extractNumber(episode);
+        JSONObject first = null;
+        JSONObject firstNonMovie = null;
+        for (int i = 0; i < array.length(); i++) {
+            JSONObject item = array.optJSONObject(i);
+            if (item == null) continue;
+            if (first == null) first = item;
+            boolean movie = isMovieType(item);
+            if (!movie && firstNonMovie == null) firstNonMovie = item;
+            if (targetNumber > 0 && !movie) {
+                int episodeCount = parseEpisodeNumber(item.optString("episodeCount", ""));
+                if (episodeCount >= targetNumber) return firstString(item, "animeId", "id");
+            }
+        }
+        JSONObject item = targetNumber > 0 && firstNonMovie != null ? firstNonMovie : first;
+        return item == null ? "" : firstString(item, "animeId", "id");
     }
 
     private static EpisodeMatch findEpisode(String body, String episode) throws Exception {
@@ -375,7 +386,24 @@ public class DanmakuApi {
 
     private static EpisodeMatch findEpisode(String body, String episode, boolean allowMovieFallback) throws Exception {
         JSONObject object = new JSONObject(body);
-        EpisodeList episodeList = findEpisodeList(object);
+        EpisodeMatch match = findEpisodeInList(findEpisodeList(object), episode, allowMovieFallback);
+        if (match != null) return match;
+        JSONArray animes = object.optJSONArray("animes");
+        if (animes == null) animes = object.optJSONArray("anime");
+        if (animes == null) animes = object.optJSONArray("data");
+        if (animes == null) return null;
+        for (int i = 0; i < animes.length(); i++) {
+            JSONObject anime = animes.optJSONObject(i);
+            if (anime == null) continue;
+            JSONArray episodes = anime.optJSONArray("episodes");
+            if (episodes == null || episodes.length() <= 0) continue;
+            match = findEpisodeInList(new EpisodeList(episodes, isMovieType(anime)), episode, allowMovieFallback);
+            if (match != null) return match;
+        }
+        return null;
+    }
+
+    private static EpisodeMatch findEpisodeInList(EpisodeList episodeList, String episode, boolean allowMovieFallback) {
         JSONArray episodes = episodeList == null ? null : episodeList.episodes;
         if (episodes == null || episodes.length() <= 0) return null;
         int targetNumber = extractNumber(episode);
@@ -398,7 +426,7 @@ public class DanmakuApi {
             if (targetNumber > 0 && extractNumber(title) == targetNumber) return match;
         }
         if (TextUtils.isEmpty(episode)) return first;
-        if (allowMovieFallback && episodeList.isMovie) return firstMandarin == null ? first : firstMandarin;
+        if (allowMovieFallback && episodeList.isMovie && targetNumber <= 0) return firstMandarin == null ? first : firstMandarin;
         return null;
     }
 
