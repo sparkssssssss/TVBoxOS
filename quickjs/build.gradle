@@ -5,28 +5,20 @@ plugins {
 android {
     compileSdkVersion 33
 
+    buildFeatures {
+        buildConfig false
+    }
+
     defaultConfig {
         minSdkVersion 19
         targetSdkVersion 28
-        externalNativeBuild {
-            cmake {
-                abiFilters 'armeabi-v7a', 'arm64-v8a'
-            }
-        }
     }
 
     buildTypes {
         debug {
-            ndk {
-                abiFilters 'armeabi-v7a', 'arm64-v8a'
-            }
         }
         release {
             minifyEnabled false
-            ndk {
-                //noinspection ChromeOsAbiSupport
-                abiFilters 'armeabi-v7a', 'arm64-v8a'
-            }
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
@@ -34,13 +26,9 @@ android {
         sourceCompatibility JavaVersion.VERSION_1_8
         targetCompatibility JavaVersion.VERSION_1_8
     }
-    externalNativeBuild {
-        /*cmake {
-            path file('src/main/cpp/CMakeLists.txt')
-            version "3.10.2"
-        }*/
-    }
 }
 
 dependencies {
+    api 'wang.harlon.quickjs:wrapper-android:2.1.0'
+    api 'wang.harlon.quickjs:wrapper-java:2.1.0'
 }
