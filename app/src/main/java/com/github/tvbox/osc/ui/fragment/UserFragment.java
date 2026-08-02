@@ -5,6 +5,7 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
 import android.view.animation.BounceInterpolator;
+import android.view.animation.DecelerateInterpolator;
 import android.widget.LinearLayout;
 import android.widget.Toast;
 
@@ -96,19 +97,17 @@ public class UserFragment extends BaseLazyFragment implements View.OnClickListen
             int spanCount = 5;
             if(style!=null && Hawk.get(HawkConfig.HOME_REC, HawkConfig.DEFAULT_HOME_REC) == 1)spanCount=ImgUtil.spanCountByStyle(style,spanCount);
             tvHotList.setLayoutManager(new V7GridLayoutManager(this.mContext, spanCount));
-            int paddingLeft = getResources().getDimensionPixelSize(R.dimen.vs_0);
+            int paddingHorizontal = getResources().getDimensionPixelSize(R.dimen.vs_10);
             int paddingTop = getResources().getDimensionPixelSize(R.dimen.vs_20);
-            int paddingRight = getResources().getDimensionPixelSize(R.dimen.vs_0);
             int paddingBottom = getResources().getDimensionPixelSize(R.dimen.vs_20);
-            tvHotList.setPadding(paddingLeft, paddingTop, paddingRight, paddingBottom);
+            tvHotList.setPadding(paddingHorizontal, paddingTop, paddingHorizontal, paddingBottom);
         } else {
             tvHotList.setVisibility(View.VISIBLE);
             tvHotList.setLayoutManager(new V7LinearLayoutManager(this.mContext, V7LinearLayoutManager.HORIZONTAL, false));
-            int paddingLeft = getResources().getDimensionPixelSize(R.dimen.vs_0);
+            int paddingHorizontal = getResources().getDimensionPixelSize(R.dimen.vs_10);
             int paddingTop = getResources().getDimensionPixelSize(R.dimen.vs_20);
-            int paddingRight = getResources().getDimensionPixelSize(R.dimen.vs_0);
             int paddingBottom = getResources().getDimensionPixelSize(R.dimen.vs_20);
-            tvHotList.setPadding(paddingLeft, paddingTop, paddingRight, paddingBottom);
+            tvHotList.setPadding(paddingHorizontal, paddingTop, paddingHorizontal, paddingBottom);
         }
         if (Hawk.get(HawkConfig.HOME_REC, HawkConfig.DEFAULT_HOME_REC) == 2) {
             List<VodInfo> allVodRecord = RoomDataManger.getAllVodRecord(20);
@@ -245,12 +244,20 @@ public class UserFragment extends BaseLazyFragment implements View.OnClickListen
         tvHotList.setOnItemListener(new TvRecyclerView.OnItemListener() {
             @Override
             public void onItemPreSelected(TvRecyclerView parent, View itemView, int position) {
-                itemView.animate().scaleX(1.0f).scaleY(1.0f).setDuration(300).setInterpolator(new BounceInterpolator()).start();
+                itemView.animate().cancel();
+                itemView.animate().scaleX(1.0f).scaleY(1.0f)
+                        .setDuration(150)
+                        .setInterpolator(new DecelerateInterpolator())
+                        .start();
             }
 
             @Override
             public void onItemSelected(TvRecyclerView parent, View itemView, int position) {
-                itemView.animate().scaleX(1.05f).scaleY(1.05f).setDuration(300).setInterpolator(new BounceInterpolator()).start();
+                itemView.animate().cancel();
+                itemView.animate().scaleX(1.03f).scaleY(1.03f)
+                        .setDuration(150)
+                        .setInterpolator(new DecelerateInterpolator())
+                        .start();
             }
 
             @Override
