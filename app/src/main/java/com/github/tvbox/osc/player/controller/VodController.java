@@ -76,11 +76,11 @@ import java.util.List;
 
 import java.util.Date;
 import java.util.Map;
+import java.util.Locale;
 
 import xyz.doikki.videoplayer.player.VideoView;
 
 import static xyz.doikki.videoplayer.util.PlayerUtils.stringForTime;
-import static xyz.doikki.videoplayer.util.PlayerUtils.seconds2Time;
 import static xyz.doikki.videoplayer.util.PlayerUtils.safeTimeMs;
 
 public class VodController extends BaseController {
@@ -261,7 +261,7 @@ public class VodController extends BaseController {
         @Override
         public void run() {
             Date date = new Date();
-            @SuppressLint("SimpleDateFormat") SimpleDateFormat timeFormat = new SimpleDateFormat("hh:mm a");
+            @SuppressLint("SimpleDateFormat") SimpleDateFormat timeFormat = new SimpleDateFormat("HH:mm");
             mPlayPauseTime.setText(timeFormat.format(date));
             long mSpeed = mControlWrapper.getTcpSpeed();
             String speed = PlayerHelper.getDisplaySpeed(mSpeed,false);
@@ -986,7 +986,6 @@ public class VodController extends BaseController {
         mScreenDisplay.setVisibility(VISIBLE);
         mCastBtn.setVisibility(Build.VERSION.SDK_INT < 30 ? GONE : VISIBLE);
         if (mPlayerConfig != null) updatePlayerCfgView();
-        hideLiveAboutBtn();
         updateDanmuBtn();
         updateDanmuSearchUiBtn();
     }
@@ -1086,8 +1085,10 @@ public class VodController extends BaseController {
 
     public void updateDanmuBtn() {
         if (mDanmuSettingBtn == null) return;
-        // 有弹幕时显示“弹幕”按钮用于设置参数；没弹幕时隐藏，改露出“弹幕搜索”。
+        // 保留本地行为：有弹幕时显示设置按钮；无弹幕时隐藏并露出搜索入口。
         mDanmuSettingBtn.setVisibility(hasDanmu ? VISIBLE : GONE);
+        // 同时保留上游菜单标签可见性刷新，避免按钮状态变化后标签错位。
+        updatePlayLabelVisibility();
     }
 
     public void updateDanmuSearchUiBtn() {
@@ -1099,20 +1100,21 @@ public class VodController extends BaseController {
 
     private void updatePlayLabelVisibility() {
         if (mPlayLabel == null || mPlayBtnGroup == null) return;
-        boolean hidePlayLabel = false;
-        String prevText = null;
+        boolean isDanmuMenuVisible = false;
+        boolean isScreenDisplayNext = false;
         for (int i = 0; i < mPlayBtnGroup.getChildCount(); i++) {
             View child = mPlayBtnGroup.getChildAt(i);
-            if (child == mPlayLabel || child.getVisibility() != VISIBLE || !(child instanceof TextView)) continue;
-            CharSequence text = ((TextView) child).getText();
-            String currentText = text == null ? "" : text.toString().trim();
-            if ("弹幕".equals(prevText) && ("搜弹幕".equals(currentText) || "弹幕搜索".equals(currentText))) {
-                hidePlayLabel = true;
+            if (child.getVisibility() != VISIBLE) continue;
+            if (child == mDanmuSettingBtn) {
+                isDanmuMenuVisible = true;
+                continue;
+            }
+            if (isDanmuMenuVisible) {
+                isScreenDisplayNext = child == mScreenDisplay;
                 break;
             }
-            prevText = currentText;
         }
-        mPlayLabel.setVisibility(hidePlayLabel ? GONE : VISIBLE);
+        mPlayLabel.setVisibility(isDanmuMenuVisible && !isScreenDisplayNext ? GONE : VISIBLE);
     }
 
     public interface VodControlListener {
@@ -1257,7 +1259,7 @@ public class VodController extends BaseController {
         }
         mCurrentTime.setText(stringForTime(position));
         mTotalTime.setText(stringForTime(duration));
-        seekTime.setText((seconds2Time(position)) + " | " + (seconds2Time(duration))); //右上角进度条时间显示
+        seekTime.setText(formatSeekTime(position) + " | " + formatSeekTime(duration)); //右上角进度条时间显示
         if (duration > 0) {
             mSeekBar.setEnabled(true);
             int pos = (int) (position * 1.0 / duration * mSeekBar.getMax());
@@ -1271,6 +1273,16 @@ public class VodController extends BaseController {
         } else {
             mSeekBar.setSecondaryProgress(percent * 10);
         }
+    }
+
+    private static String formatSeekTime(int timeMs) {
+        int totalSeconds = Math.max(0, timeMs) / 1000;
+        int seconds = totalSeconds % 60;
+        int minutes = (totalSeconds / 60) % 60;
+        int hours = totalSeconds / 3600;
+        return hours > 0
+                ? String.format(Locale.getDefault(), "%d:%02d:%02d", hours, minutes, seconds)
+                : String.format(Locale.getDefault(), "%02d:%02d", minutes, seconds);
     }
 
     private boolean simSlideStart = false;
@@ -1357,11 +1369,9 @@ public class VodController extends BaseController {
                 listener.prepared();
                 break;
             case VideoView.STATE_BUFFERED:
-                mPlayLoadNetSpeed.setVisibility(GONE);
-                break;
             case VideoView.STATE_PREPARING:
             case VideoView.STATE_BUFFERING:
-                if(mProgressRoot.getVisibility()==GONE)mPlayLoadNetSpeed.setVisibility(VISIBLE);
+                mPlayLoadNetSpeed.setVisibility(GONE);
                 break;
             case VideoView.STATE_PLAYBACK_COMPLETED:
                 listener.playNext(true);
