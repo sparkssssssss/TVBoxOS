@@ -779,12 +779,14 @@ public class VideoView<P extends AbstractPlayer> extends FrameLayout
     }
 
     private void hideSysBar(ViewGroup decorView) {
+        Activity activity = getActivity();
+        if (decorView == null || activity == null) return;
         int uiOptions = decorView.getSystemUiVisibility();
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
             uiOptions |= View.SYSTEM_UI_FLAG_HIDE_NAVIGATION;
         }
         decorView.setSystemUiVisibility(uiOptions);
-        getActivity().getWindow().setFlags(
+        activity.getWindow().setFlags(
                 WindowManager.LayoutParams.FLAG_FULLSCREEN,
                 WindowManager.LayoutParams.FLAG_FULLSCREEN);
     }
@@ -823,12 +825,14 @@ public class VideoView<P extends AbstractPlayer> extends FrameLayout
     }
 
     private void showSysBar(ViewGroup decorView) {
+        Activity activity = getActivity();
+        if (decorView == null || activity == null) return;
         int uiOptions = decorView.getSystemUiVisibility();
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
             uiOptions &= ~View.SYSTEM_UI_FLAG_HIDE_NAVIGATION;
         }
         decorView.setSystemUiVisibility(uiOptions);
-        getActivity().getWindow().clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
+        activity.getWindow().clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN);
     }
 
     /**

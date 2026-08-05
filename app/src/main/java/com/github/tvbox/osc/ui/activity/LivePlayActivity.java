@@ -1342,16 +1342,21 @@ public class LivePlayActivity extends BaseActivity {
 
     @Override
     protected void onDestroy() {
-        super.onDestroy();
+        mHandler.removeCallbacksAndMessages(null);
+        mmHandler.removeCallbacksAndMessages(null);
+        if (countDownTimer != null) {
+            countDownTimer.cancel();
+        }
+        if (countDownTimer3 != null) {
+            countDownTimer3.cancel();
+        }
         Hawk.put(HawkConfig.PLAYER_IS_LIVE, false);
         hideSwitchChannelSnapshot();
         if (mVideoView != null) {
             mVideoView.release();
             mVideoView = null;
         }
-        mHandler.removeCallbacks(mLoadEpgRun);
-        mHandler.removeCallbacks(mUpdateResolutionInfoRun);
-        mHandler.removeCallbacks(mHideResolutionInfoRun);
+        super.onDestroy();
     }
 
     private void showChannelList() {
@@ -1790,10 +1795,11 @@ public class LivePlayActivity extends BaseActivity {
     }
 
     private boolean playChannel(int channelGroupIndex, int liveChannelIndex, boolean changeSource) {
-        if ((channelGroupIndex == currentChannelGroupIndex && liveChannelIndex == currentLiveChannelIndex && !changeSource)
-                || (changeSource && currentLiveChannelItem.getSourceNum() == 1)) {
-           // showChannelInfo();
+        if (channelGroupIndex == currentChannelGroupIndex && liveChannelIndex == currentLiveChannelIndex && !changeSource) {
             return true;
+        }
+        if (changeSource && (currentLiveChannelItem == null || currentLiveChannelItem.getSourceNum() <= 1)) {
+            return currentLiveChannelItem != null;
         }
         ArrayList<LiveChannelItem> groupChannels = getLiveChannels(channelGroupIndex);
         if (groupChannels == null || groupChannels.isEmpty() || liveChannelIndex < 0 || liveChannelIndex >= groupChannels.size()) {

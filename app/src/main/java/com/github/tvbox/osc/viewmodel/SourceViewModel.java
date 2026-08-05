@@ -54,6 +54,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -111,12 +112,13 @@ public class SourceViewModel extends ViewModel {
     private static final ExecutorService httpPrepareThreadPool = Executors.newFixedThreadPool(3);
 
     //homeContent缓存，最多存储5个sourceKey的AbsSortXml对象
-    private static final Map<String, AbsSortXml> sortCache = new LinkedHashMap<String, AbsSortXml>(5, 0.75f, true) {
-        @Override
-        protected boolean removeEldestEntry(Entry<String, AbsSortXml> eldest) {
-            return size() > 5;
-        }
-    };
+    private static final Map<String, AbsSortXml> sortCache = Collections.synchronizedMap(
+            new LinkedHashMap<String, AbsSortXml>(5, 0.75f, true) {
+                @Override
+                protected boolean removeEldestEntry(Entry<String, AbsSortXml> eldest) {
+                    return size() > 5;
+                }
+            });
 
     private static void cacheSort(String sourceKey, AbsSortXml sortXml) {
         attachSortSource(sourceKey, sortXml);

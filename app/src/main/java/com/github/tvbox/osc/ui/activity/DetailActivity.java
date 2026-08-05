@@ -868,10 +868,11 @@ public class DetailActivity extends BaseActivity {
                     setTextShow(tvYear, "年份：", mVideo.year == 0 ? "" : String.valueOf(mVideo.year));
                     setTextShow(tvArea, "地区：", mVideo.area);
                     setTextShow(tvLang, "语言：", mVideo.lang);
-                    if (!firstsourceKey.equals(sourceKey)) {
-                    	setTextShow(tvType, "类型：", "[" + ApiConfig.get().getSource(sourceKey).getName() + "] 解析");
+                    if (!TextUtils.equals(firstsourceKey, sourceKey)) {
+                        SourceBean resolvedSource = ApiConfig.get().getSource(sourceKey);
+                        setTextShow(tvType, "类型：", resolvedSource == null ? "解析" : "[" + resolvedSource.getName() + "] 解析");
                     } else {
-                    	setTextShow(tvType, "类型：", mVideo.type);
+                        setTextShow(tvType, "类型：", mVideo.type);
                     }
                     setTextShow(tvActor, "演员：", mVideo.actor);
                     setTextShow(tvDirector, "导演：", mVideo.director);
@@ -910,8 +911,13 @@ public class DetailActivity extends BaseActivity {
                             vodInfo.playFlag = (String) vodInfo.seriesMap.keySet().toArray()[0];
 
                         restoreDetailFallbackEpisode();
-                        resetDetailFallback();
                         List<VodInfo.VodSeries> playingSeriesList = vodInfo.seriesMap.get(vodInfo.playFlag);
+                        if (playingSeriesList == null || playingSeriesList.isEmpty()) {
+                            // 候选源返回了线路但没有可播集数时，继续尝试下一个候选，不能先清空 fallback 状态。
+                            handleNoPlayableDetail();
+                            return;
+                        }
+                        resetDetailFallback();
                         vodInfo.playIndex = Math.max(0, Math.min(vodInfo.playIndex, playingSeriesList.size() - 1));
 
                         int flagScrollTo = 0;
@@ -1701,21 +1707,33 @@ public class DetailActivity extends BaseActivity {
         if (TextUtils.isEmpty(name)) {
             return -1;
         }
-        try {
-            String text = name.replaceAll("\\[.*?\\]|\\(.*?\\)", "");
-            text = text.replaceAll("\\b(19|20)\\d{2}\\b", "");
-            text = text.toLowerCase(Locale.ROOT).replaceAll("2160p|1080p|720p|480p|4k|h26[45]|x26[45]|mp4", "");
-            Matcher matcher = Pattern.compile("(?i)(?:ep|\\u7b2c|e|[\\-\\.\\s])\\s?(\\d{1,4})").matcher(text);
-            if (matcher.find()) {
-                return Integer.parseInt(matcher.group(1));
-            }
-            String number = text.replaceAll("\\D+", "");
-            if (!TextUtils.isEmpty(number)) {
-                return Integer.parseInt(number);
-            }
-        } catch (Exception ignored) {
+        String text = name.trim();
+        if (TextUtils.isEmpty(text)) {
+            return -1;
         }
-        return -1;
+
+        Matcher markedEpisodeMatcher = Pattern.compile("(?:第|EP|Ep|ep|episode|Episode|E)(\\d{1,5})(?:集|话|期)?").matcher(text);
+        if (markedEpisodeMatcher.find()) {
+            return parseEpisodeNumber(markedEpisodeMatcher.group(1));
+        }
+
+        String withoutExt = text.replaceAll("(?i)\\.(mp4|mkv|avi|mov|wmv|flv|m3u8|ts|rmvb|webm)$", "").trim();
+        String withoutQualitySuffix = withoutExt.replaceAll("(?i)(?:[._\\-\\s]*(?:4k|8k|2160p|1080p|720p|480p|360p|hdr|dolby|x264|x265|h264|h265|hevc|avc))+$", "").trim();
+        Matcher fileTailEpisodeMatcher = Pattern.compile("(?:^|[^0-9A-Za-z])(\\d{1,4})\\s*$").matcher(withoutQualitySuffix);
+        if (fileTailEpisodeMatcher.find()) {
+            return parseEpisodeNumber(fileTailEpisodeMatcher.group(1));
+        }
+
+        Matcher plainNumberMatcher = Pattern.compile("^0*(\\d{1,5})$").matcher(text);
+        return plainNumberMatcher.find() ? parseEpisodeNumber(plainNumberMatcher.group(1)) : -1;
+    }
+
+    private int parseEpisodeNumber(String number) {
+        try {
+            return Integer.parseInt(number);
+        } catch (NumberFormatException ignored) {
+            return -1;
+        }
     }
 
     private void insertVod(String sourceKey, VodInfo vodInfo) {
