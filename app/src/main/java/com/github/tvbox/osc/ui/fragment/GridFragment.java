@@ -23,19 +23,15 @@ import com.github.tvbox.osc.bean.AbsXml;
 import com.github.tvbox.osc.bean.Movie;
 import com.github.tvbox.osc.bean.MovieSort;
 import com.github.tvbox.osc.event.RefreshEvent;
-import com.github.tvbox.osc.ui.activity.DetailActivity;
 import com.github.tvbox.osc.ui.activity.FastSearchActivity;
-import com.github.tvbox.osc.ui.activity.SearchActivity;
 import com.github.tvbox.osc.ui.adapter.GridAdapter;
 import com.github.tvbox.osc.ui.adapter.GridFilterKVAdapter;
 import com.github.tvbox.osc.ui.dialog.GridFilterDialog;
 import com.github.tvbox.osc.ui.tv.widget.LoadMoreView;
 import com.github.tvbox.osc.util.FastClickCheckUtil;
-import com.github.tvbox.osc.util.HawkConfig;
 import com.github.tvbox.osc.util.ImgUtil;
 import com.github.tvbox.osc.util.LOG;
 import com.github.tvbox.osc.viewmodel.SourceViewModel;
-import com.orhanobut.hawk.Hawk;
 import com.owen.tvrecyclerview.widget.TvRecyclerView;
 import com.owen.tvrecyclerview.widget.V7GridLayoutManager;
 import com.owen.tvrecyclerview.widget.V7LinearLayoutManager;
@@ -135,8 +131,6 @@ public class GridFragment extends BaseLazyFragment {
     public char getUITag(){
         return (sortData == null || sortData.flag == null || sortData.flag.length() ==0 || style!=null) ?  '0' : sortData.flag.charAt(0);
     }
-    // 是否允许聚合搜索 sortData.flag的第二个字符为‘1’时允许聚搜
-    public boolean enableFastSearch(){  return sortData.flag == null || sortData.flag.length() < 2 || (sortData.flag.charAt(1) == '1'); }
     // 保存当前页面
     private void saveCurrentView(){
         if(this.mGridView == null) return;
@@ -274,17 +268,8 @@ public class GridFragment extends BaseLazyFragment {
                         }
                     }
                     else{
-                        // 无有效详情 ID 的分类项恢复旧行为：进入搜索；有效 ID 仍进入详情页。
-                        if(video.id == null || video.id.isEmpty() || video.id.startsWith("msearch:")){
-                            if(Hawk.get(HawkConfig.FAST_SEARCH_MODE, true) && enableFastSearch()){
-                                jumpActivity(FastSearchActivity.class, bundle);
-                            }else {
-                                jumpActivity(SearchActivity.class, bundle);
-                            }
-                        }else {
-                            bundle.putString("picture", video.pic);
-                            jumpActivity(DetailActivity.class, bundle);
-                        }
+                        // 普通分类项单击直接进入全源聚合搜索；文件夹/动作项仍按原逻辑处理。
+                        jumpActivity(FastSearchActivity.class, bundle);
                     }
 
                 }
