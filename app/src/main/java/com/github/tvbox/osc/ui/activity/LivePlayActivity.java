@@ -181,6 +181,18 @@ public class LivePlayActivity extends BaseActivity {
 //EPG   by 龍
     private static LiveChannelItem  channel_Name = null;
     private static Hashtable<String, ArrayList<Epginfo>> hsEpg = new Hashtable<>();
+    private static final int MAX_EPG_CACHE = 300;
+
+    private static void putEpgCache(String key, ArrayList<Epginfo> value) {
+        hsEpg.put(key, value);
+        // 有界缓存：超出上限时淘汰一条，避免长期使用后无界增长
+        if (hsEpg.size() > MAX_EPG_CACHE) {
+            java.util.Enumeration<String> keys = hsEpg.keys();
+            if (keys.hasMoreElements()) {
+                hsEpg.remove(keys.nextElement());
+            }
+        }
+    }
     private CountDownTimer countDownTimer;
 //    private CountDownTimer countDownTimerRightTop;
     private View ll_right_top_loading;
@@ -698,7 +710,7 @@ public class LivePlayActivity extends BaseActivity {
         if (arrayList.isEmpty() && requestNextEpgQueryName(date, channelNameReal, finalEpgTagName, savedEpgKey, epgQueryNames, timeFormat, queryIndex)) {
             return;
         }
-        hsEpg.put(savedEpgKey, arrayList);
+        putEpgCache(savedEpgKey, arrayList);
         if (!isCurrentEpgRequest(savedEpgKey)) return;
         showEpg(date, arrayList);
         showBottomEpg();

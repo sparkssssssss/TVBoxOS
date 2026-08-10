@@ -62,7 +62,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -1345,7 +1344,25 @@ public class SourceViewModel extends ViewModel {
         });
     }
 
-    private static final ConcurrentHashMap<String, String> extendCache = new ConcurrentHashMap<>();
+    // 有界缓存：extend 配置最多保留 EXTEND_CACHE_MAX 条，按插入顺序淘汰最旧
+    private static final int EXTEND_CACHE_MAX = 128;
+    private static final Map<String, String> extendCache =
+            Collections.synchronizedMap(new LinkedHashMap<String, String>() {
+                @Override
+                protected boolean removeEldestEntry(Map.Entry<String, String> eldest) {
+                    return size() > EXTEND_CACHE_MAX;
+                }
+            });
+
+    /** 保持原有 putIfAbsent 语义（已存在不覆盖），线程安全 */
+    private static void putExtendCache(String key, String result) {
+        if (result == null) return;
+        synchronized (extendCache) {
+            if (!extendCache.containsKey(key)) {
+                extendCache.put(key, result);
+            }
+        }
+    }
 
     private String getFixUrl(final String extend) {
         if (TextUtils.isEmpty(extend)) return "";
@@ -1364,13 +1381,13 @@ public class SourceViewModel extends ViewModel {
                     path = path.replaceAll("localhost/", "/");
                     result = FileUtils.readFileToString(path, "UTF-8");
                     result = tryMinifyJson(result);
-                    extendCache.putIfAbsent(key, result);
+                    putExtendCache(key, result);
                 } else if (extend.startsWith("http")) {
                     result = OkHttp.string(extend, null);
                     if (!result.isEmpty()) {
                         result = tryMinifyJson(result);
                         if(result.length()>2500)result = extend;
-                        extendCache.putIfAbsent(key, result);
+                        putExtendCache(key, result);
                     }
                 }
                 return result;
@@ -1823,13 +1840,13 @@ public class SourceViewModel extends ViewModel {
                 path = path.replaceAll("localhost/", "/");
                 result = FileUtils.readFileToString(path, "UTF-8");
                 result = tryMinifyJson(result);
-                extendCache.putIfAbsent(key, result);
+                putExtendCache(key, result);
             } else {
                 result = OkHttp.string(extend, null);
                 if (!TextUtils.isEmpty(result)) {
                     result = tryMinifyJson(result);
                     if (result.length() > 2500) result = extend;
-                    extendCache.putIfAbsent(key, result);
+                    putExtendCache(key, result);
                 }
             }
         } catch (Throwable th) {

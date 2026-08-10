@@ -9,6 +9,7 @@ import android.graphics.RectF;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.text.TextUtils;
+import android.util.LruCache;
 import android.widget.ImageView;
 
 import androidx.annotation.Nullable;
@@ -43,7 +44,18 @@ import java.util.Random;
 import me.jessyan.autosize.utils.AutoSizeUtils;
 
 public class ImgUtil {
-    private static final Map<String, Drawable> drawableCache = new HashMap<>();
+    /** 占位图/错误图缓存上限（按 Bitmap 字节计），避免无界增长造成内存压力 */
+    private static final int MAX_PLACEHOLDER_MEMORY = 16 * 1024 * 1024;
+    private static final LruCache<String, Drawable> drawableCache = new LruCache<String, Drawable>(MAX_PLACEHOLDER_MEMORY) {
+        @Override
+        protected int sizeOf(String key, Drawable value) {
+            if (value instanceof BitmapDrawable) {
+                Bitmap bitmap = ((BitmapDrawable) value).getBitmap();
+                if (bitmap != null) return bitmap.getByteCount();
+            }
+            return 1;
+        }
+    };
     public static int defaultWidth = 244;
     public static int defaultHeight = 320;
 
@@ -190,9 +202,10 @@ public class ImgUtil {
         if (width <= 0) width = 180;
         if (height <= 0) height = 240;
         if (cornerRadius <= 0) cornerRadius = 1;
-        String key = text + "_" + width + "x" + height + "_" + (int) cornerRadius;
         text = text.substring(0, 1);
-        if (drawableCache.containsKey(key)) return drawableCache.get(key);
+        String key = text + "_" + width + "x" + height + "_" + (int) cornerRadius;
+        Drawable cached = drawableCache.get(key);
+        if (cached != null) return cached;
         int randomColor = getRandomColor();
         Bitmap bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
         Canvas canvas = new Canvas(bitmap);
@@ -218,7 +231,8 @@ public class ImgUtil {
         if (height <= 0) height = 240;
         if (cornerRadius <= 0) cornerRadius = 1;
         String key = "placeholder_" + width + "x" + height + "_" + (int) cornerRadius;
-        if (drawableCache.containsKey(key)) return drawableCache.get(key);
+        Drawable cached = drawableCache.get(key);
+        if (cached != null) return cached;
 
         Bitmap bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
         Canvas canvas = new Canvas(bitmap);
@@ -236,7 +250,7 @@ public class ImgUtil {
     }
 
     public static void clearCache() {
-        drawableCache.clear();
+        drawableCache.evictAll();
     }
 
     public static void clearMemoryCache() {
