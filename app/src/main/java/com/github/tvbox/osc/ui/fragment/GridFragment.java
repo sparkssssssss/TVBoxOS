@@ -6,7 +6,6 @@ import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewConfiguration;
-import android.view.animation.DecelerateInterpolator;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -224,20 +223,19 @@ public class GridFragment extends BaseLazyFragment {
         mGridView.setOnItemListener(new TvRecyclerView.OnItemListener() {
             @Override
             public void onItemPreSelected(TvRecyclerView parent, View itemView, int position) {
+                // Keep the item at a fixed scale. Scaling the root also scales text and
+                // the focus stroke, which can be re-sampled differently on each frame.
                 itemView.animate().cancel();
-                itemView.animate().scaleX(1.0f).scaleY(1.0f)
-                        .setDuration(150)
-                        .setInterpolator(new DecelerateInterpolator())
-                        .start();
+                itemView.setScaleX(1.0f);
+                itemView.setScaleY(1.0f);
             }
 
             @Override
             public void onItemSelected(TvRecyclerView parent, View itemView, int position) {
+                // Focus is indicated by the selector; do not animate the text-containing root.
                 itemView.animate().cancel();
-                itemView.animate().scaleX(1.03f).scaleY(1.03f)
-                        .setDuration(150)
-                        .setInterpolator(new DecelerateInterpolator())
-                        .start();
+                itemView.setScaleX(1.0f);
+                itemView.setScaleY(1.0f);
             }
 
             @Override

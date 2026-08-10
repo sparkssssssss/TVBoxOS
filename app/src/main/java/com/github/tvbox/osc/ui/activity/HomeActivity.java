@@ -18,7 +18,6 @@ import android.view.ViewGroup;
 import android.view.animation.AccelerateInterpolator;
 import android.view.animation.AlphaAnimation;
 import android.view.animation.Animation;
-import android.view.animation.DecelerateInterpolator;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -178,22 +177,18 @@ public class HomeActivity extends BaseActivity {
             public void onItemPreSelected(TvRecyclerView tvRecyclerView, View view, int position) {
                 if (view != null && !HomeActivity.this.isDownOrUp) {
                     TextView textView = view.findViewById(R.id.tvTitle);
-                    textView.getPaint().setFakeBoldText(false);
+                    // Keep the text-containing tab at a fixed scale to avoid glyph
+                    // re-sampling while focus moves between items.
                     view.animate().cancel();
+                    view.setScaleX(1.0f);
+                    view.setScaleY(1.0f);
                     if (sortFocused == position) {
-                        view.animate().scaleX(1.03f).scaleY(1.03f)
-                                .setInterpolator(new DecelerateInterpolator())
-                                .setDuration(150).start();
                         textView.setTextColor(HomeActivity.this.getResources().getColor(R.color.color_FFFFFF));
                     } else {
-                        view.animate().scaleX(1.0f).scaleY(1.0f)
-                                .setInterpolator(new DecelerateInterpolator())
-                                .setDuration(150).start();
                         textView.setTextColor(HomeActivity.this.getResources().getColor(R.color.color_BBFFFFFF));
                         view.findViewById(R.id.tvFilter).setVisibility(View.GONE);
                         view.findViewById(R.id.tvFilterColor).setVisibility(View.GONE);
                     }
-                    textView.invalidate();
                 }
             }
 
@@ -203,13 +198,10 @@ public class HomeActivity extends BaseActivity {
                     HomeActivity.this.isDownOrUp = false;
                     HomeActivity.this.sortChange = true;
                     view.animate().cancel();
-                    view.animate().scaleX(1.03f).scaleY(1.03f)
-                            .setInterpolator(new DecelerateInterpolator())
-                            .setDuration(150).start();
+                    view.setScaleX(1.0f);
+                    view.setScaleY(1.0f);
                     TextView textView = view.findViewById(R.id.tvTitle);
-                    textView.getPaint().setFakeBoldText(true);
                     textView.setTextColor(HomeActivity.this.getResources().getColor(R.color.color_FFFFFF));
-                    textView.invalidate();
                     MovieSort.SortData sortData = sortAdapter.getItem(position);
                     if (!sortData.filters.isEmpty()) {
                         showFilterIcon(sortData.filterSelectCount());

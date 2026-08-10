@@ -12,7 +12,6 @@ import android.text.style.ForegroundColorSpan;
 import android.text.style.RelativeSizeSpan;
 import android.text.style.StyleSpan;
 import android.view.View;
-import android.view.animation.BounceInterpolator;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
@@ -70,8 +69,6 @@ public class FastSearchActivity extends BaseActivity {
     private static final int SEARCH_PUMP_SECONDS = 2;
     private static final int SEARCH_NEXT_BATCH_SECONDS = 3;
     private static final int SEARCH_SITE_TIMEOUT_SECONDS = 10;
-    private static final long POSTER_FOCUS_ANIM_DURATION = 300L;
-    private static final float POSTER_FOCUS_SCALE = 1.05f;
     private static final String SEARCH_ALL_NAME = "\u5168\u90e8";
     private LinearLayout llLayout;
     private TextView mSearchTitle;
@@ -256,13 +253,10 @@ public class FastSearchActivity extends BaseActivity {
         if (focused) {
             itemView.bringToFront();
         }
-        float scale = focused ? POSTER_FOCUS_SCALE : 1.0f;
-        itemView.animate()
-                .scaleX(scale)
-                .scaleY(scale)
-                .setDuration(POSTER_FOCUS_ANIM_DURATION)
-                .setInterpolator(new BounceInterpolator())
-                .start();
+        // The poster root also contains text, so scaling it causes glyph re-sampling.
+        itemView.animate().cancel();
+        itemView.setScaleX(1.0f);
+        itemView.setScaleY(1.0f);
     }
 
     private void initViewModel() {

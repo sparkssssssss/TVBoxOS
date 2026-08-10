@@ -3,8 +3,6 @@ package com.github.tvbox.osc.ui.fragment;
 import android.annotation.SuppressLint;
 import android.os.Bundle;
 import android.view.View;
-import android.view.animation.BounceInterpolator;
-import android.view.animation.DecelerateInterpolator;
 import android.widget.LinearLayout;
 import android.widget.Toast;
 
@@ -226,20 +224,17 @@ public class UserFragment extends BaseLazyFragment implements View.OnClickListen
         tvHotList.setOnItemListener(new TvRecyclerView.OnItemListener() {
             @Override
             public void onItemPreSelected(TvRecyclerView parent, View itemView, int position) {
+                // Do not scale the root: it contains both text and the focus stroke.
                 itemView.animate().cancel();
-                itemView.animate().scaleX(1.0f).scaleY(1.0f)
-                        .setDuration(150)
-                        .setInterpolator(new DecelerateInterpolator())
-                        .start();
+                itemView.setScaleX(1.0f);
+                itemView.setScaleY(1.0f);
             }
 
             @Override
             public void onItemSelected(TvRecyclerView parent, View itemView, int position) {
                 itemView.animate().cancel();
-                itemView.animate().scaleX(1.03f).scaleY(1.03f)
-                        .setDuration(150)
-                        .setInterpolator(new DecelerateInterpolator())
-                        .start();
+                itemView.setScaleX(1.0f);
+                itemView.setScaleY(1.0f);
             }
 
             @Override
@@ -345,10 +340,10 @@ public class UserFragment extends BaseLazyFragment implements View.OnClickListen
     private View.OnFocusChangeListener focusChangeListener = new View.OnFocusChangeListener() {
         @Override
         public void onFocusChange(View v, boolean hasFocus) {
-            if (hasFocus)
-                v.animate().scaleX(1.05f).scaleY(1.05f).setDuration(300).setInterpolator(new BounceInterpolator()).start();
-            else
-                v.animate().scaleX(1.0f).scaleY(1.0f).setDuration(300).setInterpolator(new BounceInterpolator()).start();
+            // Focus is represented by the view selector; keep text at a fixed scale.
+            v.animate().cancel();
+            v.setScaleX(1.0f);
+            v.setScaleY(1.0f);
         }
     };
 
