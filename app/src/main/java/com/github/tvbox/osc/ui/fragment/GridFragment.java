@@ -23,6 +23,7 @@ import com.github.tvbox.osc.bean.AbsXml;
 import com.github.tvbox.osc.bean.Movie;
 import com.github.tvbox.osc.bean.MovieSort;
 import com.github.tvbox.osc.event.RefreshEvent;
+import com.github.tvbox.osc.ui.activity.DetailActivity;
 import com.github.tvbox.osc.ui.activity.FastSearchActivity;
 import com.github.tvbox.osc.ui.adapter.GridAdapter;
 import com.github.tvbox.osc.ui.adapter.GridFilterKVAdapter;
@@ -268,8 +269,9 @@ public class GridFragment extends BaseLazyFragment {
                         }
                     }
                     else{
-                        // 普通分类项单击直接进入全源聚合搜索；文件夹/动作项仍按原逻辑处理。
-                        jumpActivity(FastSearchActivity.class, bundle);
+                        // 分类项单击进入详情/播放；长按仍为全源聚合搜索。
+                        bundle.putString("picture", video.pic);
+                        jumpActivity(DetailActivity.class, bundle);
                     }
 
                 }

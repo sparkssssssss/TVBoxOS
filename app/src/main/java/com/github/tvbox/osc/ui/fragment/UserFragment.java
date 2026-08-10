@@ -20,7 +20,6 @@ import com.github.tvbox.osc.bean.VodInfo;
 import com.github.tvbox.osc.cache.RoomDataManger;
 import com.github.tvbox.osc.event.ServerEvent;
 import com.github.tvbox.osc.ui.activity.CollectActivity;
-import com.github.tvbox.osc.ui.activity.DetailActivity;
 import com.github.tvbox.osc.ui.activity.FastSearchActivity;
 import com.github.tvbox.osc.ui.activity.HistoryActivity;
 import com.github.tvbox.osc.ui.activity.LivePlayActivity;
@@ -191,12 +190,10 @@ public class UserFragment extends BaseLazyFragment implements View.OnClickListen
                     RoomDataManger.deleteVodRecord(vod.sourceKey, vodInfo);
                     Toast.makeText(mContext, "已删除当前记录", Toast.LENGTH_SHORT).show();
                 } else {
+                    // 首页热播源单击直接进入全源聚合搜索；长按同为聚合搜索。
                     Bundle bundle = new Bundle();
-                    bundle.putString("id", vod.id);
-                    bundle.putString("sourceKey", vod.sourceKey);
                     bundle.putString("title", vod.name);
-                    bundle.putString("picture", vod.pic);
-                    jumpActivity(DetailActivity.class, bundle);
+                    jumpActivity(FastSearchActivity.class, bundle);
                 }
             }
         });
