@@ -14,7 +14,7 @@ import android.text.TextUtils;
 import android.util.LruCache;
 import android.widget.ImageView;
 
-import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.load.DataSource;
@@ -141,8 +141,9 @@ public class ImgUtil {
         ThreadPoolExecutor exec = new ThreadPoolExecutor(
                 1, 1, 0L, TimeUnit.MILLISECONDS,
                 new java.util.concurrent.LinkedBlockingQueue<>(BASE64_QUEUE_MAX));
-        // 队列满时丢弃新任务；图片显示会暂时停留在占位图，但不会让 UI 线程因异常崩溃
-        exec.setRejectedExecutionHandler(new ThreadPoolExecutor.DiscardPolicy());
+        // 队列满时抛 RejectedExecutionException（由调用方 catch 清理 in-flight 标记）；
+        // 图片显示会暂时停留在占位图，但不会让 UI 线程因未捕获异常崩溃
+        exec.setRejectedExecutionHandler(new ThreadPoolExecutor.AbortPolicy());
         base64Executor = exec;
     }
 
@@ -207,7 +208,7 @@ public class ImgUtil {
                 }
             });
         } catch (RejectedExecutionException e) {
-            // 队列满被丢弃：释放 inFlight 标记，图片保持占位
+            // 队列满被拒绝：释放 inFlight 标记，图片保持占位
             synchronized (base64InFlight) {
                 base64InFlight.remove(pic);
             }
