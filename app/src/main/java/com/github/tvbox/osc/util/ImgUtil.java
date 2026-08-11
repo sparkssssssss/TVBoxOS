@@ -29,6 +29,7 @@ import com.bumptech.glide.load.resource.bitmap.RoundedCorners;
 import com.bumptech.glide.request.RequestListener;
 import com.bumptech.glide.request.RequestOptions;
 import com.bumptech.glide.request.target.Target;
+import com.github.tvbox.osc.R;
 import com.github.tvbox.osc.api.ApiConfig;
 import com.github.tvbox.osc.base.App;
 import com.google.gson.Gson;
@@ -198,7 +199,11 @@ public class ImgUtil {
                     mainHandler.post(() -> {
                         Object tag = view.getTag(R.id.tag_img_request_id);
                         if (tag instanceof Long && ((Long) tag).longValue() == reqId) {
-                            view.setImageBitmap(result != null ? result : createTextDrawable(label));
+                            if (result != null) {
+                                view.setImageBitmap(result);
+                            } else {
+                                view.setImageDrawable(createTextDrawable(label));
+                            }
                         }
                     });
                 } finally {
