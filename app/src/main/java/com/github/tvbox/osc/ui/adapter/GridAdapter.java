@@ -37,10 +37,12 @@ public class GridAdapter extends BaseQuickAdapter<Movie.Video, BaseViewHolder> {
             helper.setText(R.id.tvNote, item.note);
             helper.setText(R.id.tvName, item.name);
             ImageView ivThumb = helper.getView(R.id.ivThumb);
+            // 绑定即打标记，拦截上一手 ViewHolder 的旧异步结果，防止图片错乱
+            ImgUtil.markView(ivThumb);
             String pic = item.pic == null ? "" : item.pic.trim();
             if (!TextUtils.isEmpty(pic)) {
                 if (ImgUtil.isBase64Image(pic)) {
-                    ivThumb.setImageBitmap(ImgUtil.decodeBase64ToBitmap(pic));
+                    ImgUtil.loadBase64(pic, ivThumb, item.name);
                 } else {
                     ImgUtil.load(pic, ivThumb, AutoSizeUtils.mm2px(mContext, 10), AutoSizeUtils.mm2px(mContext, 240), AutoSizeUtils.mm2px(mContext, 336), item.name);
                 }
@@ -70,6 +72,8 @@ public class GridAdapter extends BaseQuickAdapter<Movie.Video, BaseViewHolder> {
         helper.setText(R.id.tvName, item.name);
         helper.setText(R.id.tvActor, item.actor);
         ImageView ivThumb = helper.getView(R.id.ivThumb);
+        // 绑定即打标记，拦截上一手 ViewHolder 的旧异步结果，防止图片错乱
+        ImgUtil.markView(ivThumb);
         int newWidth = ImgUtil.defaultWidth;
         int newHeight = ImgUtil.defaultHeight;
         if (style != null) {
@@ -79,7 +83,7 @@ public class GridAdapter extends BaseQuickAdapter<Movie.Video, BaseViewHolder> {
         String pic = item.pic == null ? "" : item.pic.trim();
         if (!TextUtils.isEmpty(pic)) {
             if (ImgUtil.isBase64Image(pic)) {
-                ivThumb.setImageBitmap(ImgUtil.decodeBase64ToBitmap(pic));
+                ImgUtil.loadBase64(pic, ivThumb, item.name);
             } else {
                 ImgUtil.load(pic, ivThumb, AutoSizeUtils.mm2px(mContext, 10), AutoSizeUtils.mm2px(mContext, newWidth), AutoSizeUtils.mm2px(mContext, newHeight), item.name);
             }

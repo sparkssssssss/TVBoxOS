@@ -8,6 +8,8 @@ import android.graphics.Paint;
 import android.graphics.RectF;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
+import android.os.Handler;
+import android.os.Looper;
 import android.text.TextUtils;
 import android.util.LruCache;
 import android.widget.ImageView;
@@ -40,6 +42,9 @@ import java.net.URLDecoder;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Random;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicLong;
 
 import me.jessyan.autosize.utils.AutoSizeUtils;
 
@@ -110,6 +115,69 @@ public class ImgUtil {
         String base64Data = base64Str.substring(base64Str.indexOf(",") + 1);
         byte[] decodedBytes = android.util.Base64.decode(base64Data, android.util.Base64.DEFAULT);
         return BitmapFactory.decodeByteArray(decodedBytes, 0, decodedBytes.length);
+    }
+
+    // ========== Base64 海报异步解码 ==========
+
+    /** Base64 解码结果缓存（按 Bitmap 字节计量，避免无界增长） */
+    private static final int MAX_BASE64_CACHE_BYTES = 32 * 1024 * 1024;
+    private static final LruCache<String, Bitmap> base64BitmapCache = new LruCache<String, Bitmap>(MAX_BASE64_CACHE_BYTES) {
+        @Override
+        protected int sizeOf(String key, Bitmap value) {
+            return value == null ? 0 : value.getByteCount();
+        }
+    };
+    /** 单线程后台解码，串行执行避免并发解码造成 CPU/内存峰值 */
+    private static final ExecutorService base64Executor = Executors.newSingleThreadExecutor();
+    private static final Handler mainHandler = new Handler(Looper.getMainLooper());
+    private static final AtomicLong REQ_SEQ = new AtomicLong();
+
+    /**
+     * 为 ImageView 打上当前绑定标记，用于拦截旧异步结果，防止 ViewHolder 复用导致图片错乱。
+     * 每次 convert 绑定（无论走 Base64/Glide/占位分支）都应先调用。
+     */
+    public static long markView(ImageView view) {
+        long id = REQ_SEQ.incrementAndGet();
+        view.setTag(id);
+        return id;
+    }
+
+    /**
+     * 异步加载 Base64 海报：命中缓存直接设置；未命中先显示占位，后台线程解码完成后回主线程设置。
+     * 解码失败显示文字占位图。内部已做 ViewHolder 复用防错校验。
+     */
+    public static void loadBase64(String pic, ImageView view, String label) {
+        final long reqId = REQ_SEQ.incrementAndGet();
+        view.setTag(reqId);
+
+        Bitmap hit = base64BitmapCache.get(pic);
+        if (hit != null) {
+            view.setImageBitmap(hit);
+            return;
+        }
+        // 未命中先显示占位，避免残留上一手内容；占位图走 drawableCache 有界缓存
+        view.setImageDrawable(createTextDrawable(label));
+        base64Executor.execute(() -> {
+            // 执行前再查一次缓存：前面排队的任务可能已解出同一张图
+            Bitmap bmp = base64BitmapCache.get(pic);
+            if (bmp == null) {
+                try {
+                    bmp = decodeBase64ToBitmap(pic);
+                } catch (Throwable ignored) {
+                    // 损坏的 Base64 走占位图，避免主线程崩溃（原同步路径无保护）
+                }
+                if (bmp != null) {
+                    base64BitmapCache.put(pic, bmp);
+                }
+            }
+            final Bitmap result = bmp;
+            mainHandler.post(() -> {
+                Object tag = view.getTag();
+                if (tag instanceof Long && ((Long) tag).longValue() == reqId) {
+                    view.setImageBitmap(result != null ? result : createTextDrawable(label));
+                }
+            });
+        });
     }
 
     public static void load(String url, ImageView view, int roundingRadius) {
