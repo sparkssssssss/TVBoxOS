@@ -14,7 +14,7 @@ import android.text.TextUtils;
 import android.util.LruCache;
 import android.widget.ImageView;
 
-import androidx.annotation.Nullable;
+import androidx.annotation.NonNull;
 
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.load.DataSource;
@@ -40,10 +40,14 @@ import org.json.JSONObject;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 
 import me.jessyan.autosize.utils.AutoSizeUtils;
@@ -127,8 +131,21 @@ public class ImgUtil {
             return value == null ? 0 : value.getByteCount();
         }
     };
-    /** 单线程后台解码，串行执行避免并发解码造成 CPU/内存峰值 */
-    private static final ExecutorService base64Executor = Executors.newSingleThreadExecutor();
+    // 单线程后台解码；有界队列 + 丢弃拒绝策略，避免快速滚动时任务无限堆积
+    private static final int BASE64_QUEUE_MAX = 128;
+    private static final ExecutorService base64Executor;
+    // 正在解码（或已在队列中）的 Base64 key，避免同一图片重复排队
+    private static final Set<String> base64InFlight = new HashSet<>();
+
+    static {
+        ThreadPoolExecutor exec = new ThreadPoolExecutor(
+                1, 1, 0L, TimeUnit.MILLISECONDS,
+                new java.util.concurrent.LinkedBlockingQueue<>(BASE64_QUEUE_MAX));
+        // 队列满时丢弃新任务；图片显示会暂时停留在占位图，但不会让 UI 线程因异常崩溃
+        exec.setRejectedExecutionHandler(new ThreadPoolExecutor.DiscardPolicy());
+        base64Executor = exec;
+    }
+
     private static final Handler mainHandler = new Handler(Looper.getMainLooper());
     private static final AtomicLong REQ_SEQ = new AtomicLong();
 
@@ -136,10 +153,9 @@ public class ImgUtil {
      * 为 ImageView 打上当前绑定标记，用于拦截旧异步结果，防止 ViewHolder 复用导致图片错乱。
      * 每次 convert 绑定（无论走 Base64/Glide/占位分支）都应先调用。
      */
-    public static long markView(ImageView view) {
+    public static void markView(ImageView view) {
         long id = REQ_SEQ.incrementAndGet();
-        view.setTag(id);
-        return id;
+        view.setTag(R.id.tag_img_request_id, id);
     }
 
     /**
@@ -148,7 +164,7 @@ public class ImgUtil {
      */
     public static void loadBase64(String pic, ImageView view, String label) {
         final long reqId = REQ_SEQ.incrementAndGet();
-        view.setTag(reqId);
+        view.setTag(R.id.tag_img_request_id, reqId);
 
         Bitmap hit = base64BitmapCache.get(pic);
         if (hit != null) {
@@ -157,27 +173,45 @@ public class ImgUtil {
         }
         // 未命中先显示占位，避免残留上一手内容；占位图走 drawableCache 有界缓存
         view.setImageDrawable(createTextDrawable(label));
-        base64Executor.execute(() -> {
-            // 执行前再查一次缓存：前面排队的任务可能已解出同一张图
-            Bitmap bmp = base64BitmapCache.get(pic);
-            if (bmp == null) {
+        // 同一图片已在解码/排队则不再重复提交（防重复排队）
+        synchronized (base64InFlight) {
+            if (base64InFlight.contains(pic)) return;
+            base64InFlight.add(pic);
+        }
+        try {
+            base64Executor.execute(() -> {
                 try {
-                    bmp = decodeBase64ToBitmap(pic);
-                } catch (Throwable ignored) {
-                    // 损坏的 Base64 走占位图，避免主线程崩溃（原同步路径无保护）
-                }
-                if (bmp != null) {
-                    base64BitmapCache.put(pic, bmp);
-                }
-            }
-            final Bitmap result = bmp;
-            mainHandler.post(() -> {
-                Object tag = view.getTag();
-                if (tag instanceof Long && ((Long) tag).longValue() == reqId) {
-                    view.setImageBitmap(result != null ? result : createTextDrawable(label));
+                    // 执行前再查一次缓存：前面排队的任务可能已解出同一张图
+                    Bitmap bmp = base64BitmapCache.get(pic);
+                    if (bmp == null) {
+                        try {
+                            bmp = decodeBase64ToBitmap(pic);
+                        } catch (Throwable ignored) {
+                            // 损坏的 Base64 走占位图，避免主线程崩溃（原同步路径无保护）
+                        }
+                        if (bmp != null) {
+                            base64BitmapCache.put(pic, bmp);
+                        }
+                    }
+                    final Bitmap result = bmp;
+                    mainHandler.post(() -> {
+                        Object tag = view.getTag(R.id.tag_img_request_id);
+                        if (tag instanceof Long && ((Long) tag).longValue() == reqId) {
+                            view.setImageBitmap(result != null ? result : createTextDrawable(label));
+                        }
+                    });
+                } finally {
+                    synchronized (base64InFlight) {
+                        base64InFlight.remove(pic);
+                    }
                 }
             });
-        });
+        } catch (RejectedExecutionException e) {
+            // 队列满被丢弃：释放 inFlight 标记，图片保持占位
+            synchronized (base64InFlight) {
+                base64InFlight.remove(pic);
+            }
+        }
     }
 
     public static void load(String url, ImageView view, int roundingRadius) {
@@ -323,6 +357,7 @@ public class ImgUtil {
 
     public static void clearMemoryCache() {
         clearCache();
+        base64BitmapCache.evictAll();
         try {
             Glide.get(App.getInstance()).clearMemory();
             LOG.i("echo-img-clear-memory-cache");
