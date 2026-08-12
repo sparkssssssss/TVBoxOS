@@ -212,6 +212,7 @@ public class SubtitleViewModel extends ViewModel {
         String lower = fileName.toLowerCase(Locale.ROOT);
         return lower.endsWith(".srt")
                 || lower.endsWith(".ass")
+                || lower.endsWith(".scc")
                 || lower.endsWith(".stl")
                 || lower.endsWith(".ttml");
     }
