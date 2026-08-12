@@ -246,7 +246,6 @@ public class VodController extends BaseController {
     TextView seekTime; //右上角进度时间显示
     TextView mScreenDisplay; //增加屏显开关
     LinearLayout tv_screen_display; //增加屏显布局
-    TextView mCastBtn;
     TextView net_play_speed;
     private boolean hasDanmu = false;
     private boolean showParse;
@@ -356,7 +355,6 @@ public class VodController extends BaseController {
         backBtn = findViewById(R.id.tv_back);
         seekTime = findViewById(R.id.tv_seek_time);
         mScreenDisplay = findViewById(R.id.screen_display);
-        mCastBtn = findViewById(R.id.play_cast);
         updateDanmuBtn();
         updateDanmuSearchUiBtn();
         backBtn.setOnClickListener(new OnClickListener() {
@@ -1030,17 +1028,6 @@ public class VodController extends BaseController {
                 hideBottom();
             }
         });
-        mCastBtn.setOnClickListener(new OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                if (listener != null) listener.clickCast();
-            }
-        });
-        if (Build.VERSION.SDK_INT < 30) {
-            mCastBtn.setVisibility(GONE);
-        } else {
-            mCastBtn.setVisibility(VISIBLE);
-        }
         mScreenDisplay.setNextFocusRightId(R.id.play_next);
         mNextBtn.setNextFocusLeftId(R.id.screen_display);
     }
@@ -1094,7 +1081,6 @@ public class VodController extends BaseController {
             mPlayerTimeStartBtn.setVisibility(GONE);
             mPlayerTimeSkipBtn.setVisibility(GONE);
             mPlayerTimeResetBtn.setVisibility(GONE);
-            mCastBtn.setVisibility(GONE);
             mZimuBtn.setVisibility(GONE);
             mAudioTrackBtn.setVisibility(GONE);
             mVideoTrackBtn.setVisibility(GONE);
@@ -1113,7 +1099,6 @@ public class VodController extends BaseController {
         mPlayerTimeResetBtn.setVisibility(VISIBLE);
         mZimuBtn.setVisibility(VISIBLE);
         mScreenDisplay.setVisibility(VISIBLE);
-        mCastBtn.setVisibility(Build.VERSION.SDK_INT < 30 ? GONE : VISIBLE);
         if (mPlayerConfig != null) updatePlayerCfgView();
         updateDanmuBtn();
         updateDanmuSearchUiBtn();
@@ -1283,8 +1268,6 @@ public class VodController extends BaseController {
         void startPlayUrl(String url, HashMap<String, String> headers);
 
         void onM3u8ProxyUrl(String proxyUrl, String sourceUrl);
-
-        void clickCast();
 
         void setAllowSwitchPlayer(boolean isAllow);
     }
