@@ -29,6 +29,7 @@ import com.github.tvbox.osc.ui.adapter.GridAdapter;
 import com.github.tvbox.osc.ui.adapter.GridFilterKVAdapter;
 import com.github.tvbox.osc.ui.dialog.GridFilterDialog;
 import com.github.tvbox.osc.ui.tv.widget.LoadMoreView;
+import com.github.tvbox.osc.ui.tv.widget.TvGridView;
 import com.github.tvbox.osc.util.FastClickCheckUtil;
 import com.github.tvbox.osc.util.ImgUtil;
 import com.github.tvbox.osc.util.LOG;
@@ -173,11 +174,14 @@ public class GridFragment extends BaseLazyFragment {
         if(mGridView == null){ // 从layout中拿view
             mGridView = findViewById(R.id.mGridView);
         }else{ // 复制当前view
-            TvRecyclerView v3 = new TvRecyclerView(this.mContext);
+            TvGridView v3 = new TvGridView(this.mContext);
             v3.setSpacingWithMargins(10,10);
             v3.setLayoutParams(mGridView.getLayoutParams());
             v3.setPadding(mGridView.getPaddingLeft(), mGridView.getPaddingTop(), mGridView.getPaddingRight(), mGridView.getPaddingBottom());
             v3.setClipToPadding(mGridView.getClipToPadding());
+            // 与 XML 首层列表保持一致：复制裁剪与居中导航属性，避免子层行为不一致
+            v3.setClipChildren(mGridView.getClipChildren());
+            v3.setSelectedItemAtCentered(mGridView.isSelectedItemCentered());
             ((ViewGroup) mGridView.getParent()).addView(v3);
             mGridView.setVisibility(View.GONE);
             mGridView = v3;

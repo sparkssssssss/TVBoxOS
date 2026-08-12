@@ -7,7 +7,7 @@
     android:clipToPadding="false"
     android:orientation="vertical">
 
-    <com.owen.tvrecyclerview.widget.TvRecyclerView
+    <com.github.tvbox.osc.ui.tv.widget.TvGridView
         android:id="@+id/mGridView"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
