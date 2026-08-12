@@ -3,8 +3,9 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="horizontal"
-    android:background="@drawable/shape_user_focus"
-    android:focusable="true">
+    android:background="@drawable/shape_user_focus_glow"
+    android:focusable="true"
+    android:padding="@dimen/vs_3">
 
 
     <LinearLayout

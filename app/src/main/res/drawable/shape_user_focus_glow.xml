@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  方案C · 柔光晕聚焦效果（2026-08-12，reviewer 修复版 v2）
+  聚焦态：三层同心白描边（inset 3/6/9dp，每层 stroke 6dp）模拟柔和外发光
+          + 提亮底色 #775050；不缩放、不重采样。
+  失焦态：保持原深底，仅由聚焦态提供反差。
+  注：stroke 以路径为中心向两侧各延伸 width/2。三层路径均内缩 ≥ 半宽
+      （3dp ≥ 3dp），所以光晕全部落在 View bounds 内、无裁剪；
+      这也意味着焦点卡片不会向外溢出，无需依赖 clipChildren。
+-->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_focused="true">
+        <layer-list>
+            <!-- 外层柔光晕 [0,6dp] -->
+            <item
+                android:left="3dp"
+                android:top="3dp"
+                android:right="3dp"
+                android:bottom="3dp">
+                <shape android:shape="rectangle">
+                    <corners android:radius="10mm" />
+                    <stroke android:width="6dp" android:color="#26FFFFFF" />
+                    <solid android:color="@android:color/transparent" />
+                </shape>
+            </item>
+            <!-- 中层光晕 [3,9dp] -->
+            <item
+                android:left="6dp"
+                android:top="6dp"
+                android:right="6dp"
+                android:bottom="6dp">
+                <shape android:shape="rectangle">
+                    <corners android:radius="10mm" />
+                    <stroke android:width="6dp" android:color="#4DFFFFFF" />
+                    <solid android:color="@android:color/transparent" />
+                </shape>
+            </item>
+            <!-- 主边框 [6,12dp] + 提亮底色 [9dp+] -->
+            <item
+                android:left="9dp"
+                android:top="9dp"
+                android:right="9dp"
+                android:bottom="9dp">
+                <shape android:shape="rectangle">
+                    <corners android:radius="10mm" />
+                    <stroke android:width="6dp" android:color="@color/color_FFFFFF" />
+                    <solid android:color="@color/color_775050" />
+                </shape>
+            </item>
+        </layer-list>
+    </item>
+    <item>
+        <shape android:shape="rectangle">
+            <corners android:radius="10mm" />
+            <solid android:color="@color/color_6C3D3D3D" />
+        </shape>
+    </item>
+</selector>
