@@ -25,9 +25,6 @@ public class HomeHotVodAdapter extends BaseQuickAdapter<Movie.Video, BaseViewHol
     private int defaultWidth;
     private final ImgUtil.Style style;
     private String tvRateValue;
-    // 已应用到容器的尺寸缓存：style 恒定，尺寸不变时跳过重复 setLayoutParams
-    private int appliedStyleW = -1;
-    private int appliedStyleH = -1;
 
     public HomeHotVodAdapter(ImgUtil.Style style, String tvRate) {
         super(R.layout.item_user_hot_vod, new ArrayList<>());
@@ -87,11 +84,15 @@ public class HomeHotVodAdapter extends BaseQuickAdapter<Movie.Video, BaseViewHol
         ViewGroup container = (ViewGroup) ivThumb.getParent();
         int width = AutoSizeUtils.mm2px(mContext, defaultWidth);
         int height = AutoSizeUtils.mm2px(mContext, (int) (defaultWidth / style.ratio));
-        if (width == appliedStyleW && height == appliedStyleH) return;
-        appliedStyleW = width;
-        appliedStyleH = height;
         ViewGroup.LayoutParams containerParams = container.getLayoutParams();
+        // 取不到 LayoutParams 时直接返回且不更新缓存，下次 bind 重试；
+        // 避免缓存已标记"已应用"后永久跳过设置。
         if (containerParams == null) return;
+        // 当前容器已是指定尺寸（正常 rebind 场景）→ 短路，不再 requestLayout；
+        // 同时核对当前 ViewHolder 实际尺寸，防止 holder 被外部改过后永久不修正。
+        if (containerParams.width == width && containerParams.height == height) {
+            return;
+        }
         containerParams.height = height;
         containerParams.width = width;
         container.setLayoutParams(containerParams);

@@ -25,8 +25,8 @@ import com.owen.tvrecyclerview.widget.TvRecyclerView;
  *   表现为"哐哐哐"的跳变；但累计滚动距离始终等于目标居中位置，不会越界。
  *
  * 因此本类不再默认做 stopScroll()（见 STOP_IN_FLIGHT），而是提供：
- * 1. 实机诊断日志（DEBUG_LOG），用于确认异常到底是单次超大 dy、焦点跨多项，
- *    还是短时间内连续多次正常请求；
+ * 1. 实机诊断日志（DEBUG_LOG，默认关闭，避免诊断代码改变问题发生概率）；
+ *    用于确认异常到底是单次超大 dy、焦点跨多项，还是短时间内连续多次正常请求；
  * 2. 一个可开关的 A/B 加固（STOP_IN_FLIGHT）：在"新焦点滚动请求打断进行中的
  *    平滑滚动"场景下先 stopScroll()，观察是否改善顿挫/跳变。
  *
@@ -35,13 +35,19 @@ import com.owen.tvrecyclerview.widget.TvRecyclerView;
  *   实机复现后抓 logcat 回传。确认问题后应置回 false。
  * - STOP_IN_FLIGHT=true 启用"打断进行中平滑滚动"的加固；false 为纯观察模式，
  *   用于 A/B 对比。
+ *
+ * 注意：即使收窄到 SETTLING + child.hasFocus() + !immediate，仍无法完全区分
+ * DPAD 焦点导航与程序化 SmoothScroller 期间触发的 rectangle 请求，stopScroll()
+ * 仍会停止 ViewFlinger 与 LayoutManager SmoothScroller。该条件只是缩小了误伤面
+ * （排除 immediate、触摸 DRAGGING、明显非焦点请求），电视端需回归
+ * scrollToPosition/setSelectionWithSmooth/返回页面焦点恢复/子分类切换/load-more。
  */
 public class TvGridView extends TvRecyclerView {
 
     private static final String TAG = "FocusScroll";
 
-    /** 每请求打印诊断日志（实机抓 logcat 用；生产构建前置回 false） */
-    public static boolean DEBUG_LOG = true;
+    /** 每请求打印诊断日志；默认关闭，诊断时改为 true 重新构建 */
+    public static boolean DEBUG_LOG = false;
 
     /** A/B 开关：发起新焦点滚动前，若处于 SETTLING 则先 stopScroll() */
     public static boolean STOP_IN_FLIGHT = true;
@@ -66,9 +72,17 @@ public class TvGridView extends TvRecyclerView {
         final long now = SystemClock.uptimeMillis();
         if (DEBUG_LOG) {
             int pos = child != null ? getChildAdapterPosition(child) : -1;
-            int overhang = child != null
-                    ? rect.bottom + getPaddingBottom() - getHeight()
-                    : 0; // 近似请求的滚动量：child 底部相对视口底部的越界量
+            // 与库内 getChildRectangleOnScreenScrollAmount2 相同的取界方式：
+            // 用 decorated bounds + padding 计算相对视口的真实越界量（未过 computeScrollOffset）。
+            int overhang = 0;
+            boolean vertical = getLayoutManager() != null && getLayoutManager().canScrollVertically();
+            if (child != null) {
+                Rect decorated = new Rect();
+                getDecoratedBoundsWithMargins(child, decorated);
+                overhang = vertical
+                        ? decorated.bottom + getPaddingBottom() - getHeight()
+                        : decorated.right + getPaddingRight() - getWidth();
+            }
             Log.i(TAG, "req pos=" + pos
                     + " focused=" + getSelectedPosition()
                     + " state=" + scrollStateName(getScrollState())
@@ -81,10 +95,12 @@ public class TvGridView extends TvRecyclerView {
                     + " sinceLast=" + (now - mLastRequestAt) + "ms");
             mLastPos = pos;
         }
+        // 收窄条件：仅打断"进行中的平滑滚动被新焦点请求替换"的场景，缩小误伤面；
+        // 无法完全区分 DPAD 与程序化 SmoothScroller，见类注释的回归清单。
         if (STOP_IN_FLIGHT
                 && !immediate
                 && child != null
-                && child.hasFocus() // 仅 DPAD 焦点导航路径（IME/无障碍/程序化请求通常不带焦点）
+                && child.hasFocus()
                 && getScrollState() == RecyclerView.SCROLL_STATE_SETTLING) {
             stopScroll();
         }
