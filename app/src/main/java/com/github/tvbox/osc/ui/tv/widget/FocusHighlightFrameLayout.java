@@ -10,26 +10,25 @@ import android.util.TypedValue;
 import android.widget.FrameLayout;
 
 /**
- * FrameLayout that draws a translucent white "light-up" overlay on top of its
- * children while the view itself has focus.
+ * FrameLayout that creates a high-contrast, static focus state on top of its
+ * children. The focused card receives a small white lift; every unfocused
+ * sibling is darkened. The contrast is deliberately two-sided: a white-only
+ * overlay on the focused poster was too subtle to recognize from TV distance.
  *
- * Why a custom view instead of a child overlay or android:foreground:
- * - A child View with android:duplicateParentState does not reliably refresh
- *   its drawable state when the parent's focus changes on all devices (the
- *   focus border selector still works because it lives on the focused root,
- *   but a sibling overlay child did not visibly update on TV).
- * - android:foreground only draws on top of children on API 23+; this app
- *   ships minSdk 19 flavors where it is drawn under the children.
- * - Here we read the view's own focus state directly (the same state that
- *   drives the focus border, which is proven to work on TV) and paint the
- *   overlay right after dispatchDraw(), so it always covers the content.
+ * The overlay is painted directly after dispatchDraw(), based on this root
+ * view's own focus state (the same proven state used by shape_user_focus).
+ * It therefore does not depend on duplicateParentState or foreground API
+ * behavior on older TV systems.
  *
  * No scaling / animation / layout changes are involved, so no text
  * re-sampling jitter is introduced (root scale stays fixed at 1.0).
  */
 public class FocusHighlightFrameLayout extends FrameLayout {
 
-    private static final int HIGHLIGHT_COLOR = 0x40FFFFFF; // 25% white
+    /** Focused card: a restrained white lift; white text remains crisp. */
+    private static final int FOCUSED_OVERLAY_COLOR = 0x24FFFFFF; // 14% white
+    /** Unfocused cards: visibly recede so the focused card is unmistakable. */
+    private static final int UNFOCUSED_OVERLAY_COLOR = 0x3D000000; // 24% black
 
     private final Paint mPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Path mPath = new Path();
@@ -49,17 +48,27 @@ public class FocusHighlightFrameLayout extends FrameLayout {
         // Same 10mm corner radius as the focus background drawable.
         mCornerRadius = TypedValue.applyDimension(
                 TypedValue.COMPLEX_UNIT_MM, 10f, getResources().getDisplayMetrics());
-        mPaint.setColor(HIGHLIGHT_COLOR);
+        mPaint.setColor(UNFOCUSED_OVERLAY_COLOR);
+    }
+
+    @Override
+    protected void onFocusChanged(boolean gainFocus, int direction, android.graphics.Rect previouslyFocusedRect) {
+        super.onFocusChanged(gainFocus, direction, previouslyFocusedRect);
+        // The focus border already invalidates through its selector. Do this
+        // explicitly as well, so our post-child canvas overlay is redrawn on
+        // every focus transition on every supported TV implementation.
+        invalidate();
     }
 
     @Override
     protected void dispatchDraw(Canvas canvas) {
         super.dispatchDraw(canvas);
-        if (isFocused() && getWidth() > 0 && getHeight() > 0) {
-            mRect.set(0f, 0f, getWidth(), getHeight());
-            mPath.reset();
-            mPath.addRoundRect(mRect, mCornerRadius, mCornerRadius, Path.Direction.CW);
-            canvas.drawPath(mPath, mPaint);
-        }
+        if (getWidth() <= 0 || getHeight() <= 0) return;
+
+        mPaint.setColor(isFocused() ? FOCUSED_OVERLAY_COLOR : UNFOCUSED_OVERLAY_COLOR);
+        mRect.set(0f, 0f, getWidth(), getHeight());
+        mPath.reset();
+        mPath.addRoundRect(mRect, mCornerRadius, mCornerRadius, Path.Direction.CW);
+        canvas.drawPath(mPath, mPaint);
     }
 }
