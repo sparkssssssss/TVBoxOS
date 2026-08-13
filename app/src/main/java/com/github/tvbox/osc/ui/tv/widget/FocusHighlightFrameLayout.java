@@ -11,9 +11,9 @@ import android.widget.FrameLayout;
 
 /**
  * FrameLayout that creates a high-contrast, static focus state on top of its
- * children. The focused card receives a small white lift; every unfocused
- * sibling is darkened. The contrast is deliberately two-sided: a white-only
- * overlay on the focused poster was too subtle to recognize from TV distance.
+ * children. The focused card receives a small white lift while unfocused
+ * cards retain their original brightness. This keeps the page natural while
+ * adding a restrained 10-20% focus contrast.
  *
  * The overlay is painted directly after dispatchDraw(), based on this root
  * view's own focus state (the same proven state used by shape_user_focus).
@@ -26,9 +26,9 @@ import android.widget.FrameLayout;
 public class FocusHighlightFrameLayout extends FrameLayout {
 
     /** Focused card: a restrained white lift; white text remains crisp. */
-    private static final int FOCUSED_OVERLAY_COLOR = 0x24FFFFFF; // 14% white
-    /** Unfocused cards: visibly recede so the focused card is unmistakable. */
-    private static final int UNFOCUSED_OVERLAY_COLOR = 0x3D000000; // 24% black
+    private static final int FOCUSED_OVERLAY_COLOR = 0x26FFFFFF; // 15% white
+    /** Unfocused cards remain at their original brightness. */
+    private static final int UNFOCUSED_OVERLAY_COLOR = 0x00000000; // transparent
 
     private final Paint mPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Path mPath = new Path();
@@ -66,6 +66,7 @@ public class FocusHighlightFrameLayout extends FrameLayout {
         if (getWidth() <= 0 || getHeight() <= 0) return;
 
         mPaint.setColor(isFocused() ? FOCUSED_OVERLAY_COLOR : UNFOCUSED_OVERLAY_COLOR);
+        if (!isFocused()) return;
         mRect.set(0f, 0f, getWidth(), getHeight());
         mPath.reset();
         mPath.addRoundRect(mRect, mCornerRadius, mCornerRadius, Path.Direction.CW);
