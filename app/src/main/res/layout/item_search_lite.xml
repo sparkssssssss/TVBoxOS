@@ -15,4 +15,10 @@
         android:singleLine="true"
         android:textColor="@color/color_FFFFFF"
         android:textSize="@dimen/ts_20" />
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@drawable/shape_focus_highlight"
+        android:duplicateParentState="true" />
 </FrameLayout>
