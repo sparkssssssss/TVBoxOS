@@ -110,7 +110,7 @@ public class EpisodeDialog extends BaseDialog {
         private final int selectedPosition;
 
         EpisodeAdapter(int selectedPosition) {
-            super(R.layout.item_series, new ArrayList<VodInfo.VodSeries>());
+            super(R.layout.item_episode_series, new ArrayList<VodInfo.VodSeries>());
             this.selectedPosition = selectedPosition;
         }
 
