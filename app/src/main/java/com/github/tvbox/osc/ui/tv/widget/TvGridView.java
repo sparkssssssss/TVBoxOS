@@ -72,16 +72,22 @@ public class TvGridView extends TvRecyclerView {
         final long now = SystemClock.uptimeMillis();
         if (DEBUG_LOG) {
             int pos = child != null ? getChildAdapterPosition(child) : -1;
-            // 与库内 getChildRectangleOnScreenScrollAmount2 相同的取界方式：
-            // 用 decorated bounds + padding 计算相对视口的真实越界量（未过 computeScrollOffset）。
-            int overhang = 0;
+            // 与库内 getChildRectangleOnScreenScrollAmount2 的输入同源：
+            // 记录 decorated 边缘相对视口的越界量（top/right/bottom 均记录，未过
+            // computeScrollOffset，因此不代表最终 dy；仅用于诊断趋势）。
+            int edgeOver = 0;
+            int edgeOverTop = 0;
             boolean vertical = getLayoutManager() != null && getLayoutManager().canScrollVertically();
             if (child != null) {
                 Rect decorated = new Rect();
                 getDecoratedBoundsWithMargins(child, decorated);
-                overhang = vertical
-                        ? decorated.bottom + getPaddingBottom() - getHeight()
-                        : decorated.right + getPaddingRight() - getWidth();
+                if (vertical) {
+                    edgeOverTop = decorated.top - getPaddingTop();
+                    edgeOver = decorated.bottom + getPaddingBottom() - getHeight();
+                } else {
+                    edgeOverTop = decorated.left - getPaddingLeft();
+                    edgeOver = decorated.right + getPaddingRight() - getWidth();
+                }
             }
             Log.i(TAG, "req pos=" + pos
                     + " focused=" + getSelectedPosition()
@@ -90,7 +96,8 @@ public class TvGridView extends TvRecyclerView {
                     + " last=" + getLastVisiblePosition()
                     + " immediate=" + immediate
                     + " childFocused=" + (child != null && child.hasFocus())
-                    + " overhang=" + overhang
+                    + " edgeStart=" + edgeOverTop
+                    + " edgeEnd=" + edgeOver
                     + " dPos=" + (pos - mLastPos)
                     + " sinceLast=" + (now - mLastRequestAt) + "ms");
             mLastPos = pos;

@@ -99,8 +99,7 @@ public class GridAdapter extends BaseQuickAdapter<Movie.Video, BaseViewHolder> {
         int width = AutoSizeUtils.mm2px(mContext, defaultWidth);
         int height = AutoSizeUtils.mm2px(mContext, (int) (defaultWidth / style.ratio));
         ViewGroup.LayoutParams containerParams = container.getLayoutParams();
-        // 取不到 LayoutParams 时直接返回且不更新缓存，下次 bind 重试；
-        // 避免缓存已标记"已应用"后永久跳过设置。
+        // 取不到 LayoutParams 时返回，下次 bind 重试。
         if (containerParams == null) return;
         // 当前容器已是指定尺寸（正常 rebind 场景）→ 短路，不再 requestLayout；
         // 同时核对当前 ViewHolder 实际尺寸，防止 holder 被外部改过后永久不修正。
