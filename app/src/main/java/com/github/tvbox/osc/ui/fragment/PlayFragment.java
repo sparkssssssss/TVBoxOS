@@ -190,6 +190,18 @@ public class PlayFragment extends BaseLazyFragment {
         checkDanmu(danmu, null);
     }
 
+    private void openBuiltinSearchDanmuDialog() {
+        if (!isAdded() || mVodInfo == null) return;
+        SearchDanmuDialog searchDanmuDialog = new SearchDanmuDialog(requireContext());
+        searchDanmuDialog.setDanmuLoader(danmu -> {
+            if (isAdded()) checkDanmu(danmu);
+        });
+        VodInfo.VodSeries series = getCurrentSeries(mVodInfo.playFlag, mVodInfo.playIndex);
+        searchDanmuDialog.setEpisode(series == null ? "" : series.name);
+        searchDanmuDialog.setSearchWord(mVodInfo.name);
+        searchDanmuDialog.show();
+    }
+
     private void checkDanmu(String danmu, DanmuLoadController.LoadCallback callback) {
         if (danmuLoadController != null) {
             danmuLoadController.check(danmu, mVodInfo == null ? "" : mVodInfo.name, getCurrentDanmuEpisode(), callback);
@@ -320,7 +332,11 @@ public class PlayFragment extends BaseLazyFragment {
 
             @Override
             public void searchDanmuUi(boolean longClick) {
-                ApiConfig.get().searchDanmuUi(mVodInfo == null ? "" : mVodInfo.name, getCurrentDanmuEpisode(), longClick);
+                if (ApiConfig.get().hasDanmuSearchUi()) {
+                    ApiConfig.get().searchDanmuUi(mVodInfo == null ? "" : mVodInfo.name, getCurrentDanmuEpisode(), longClick);
+                } else {
+                    openBuiltinSearchDanmuDialog();
+                }
             }
 
             @Override

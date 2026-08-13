@@ -1202,8 +1202,8 @@ public class VodController extends BaseController {
 
     public void updateDanmuBtn() {
         if (mDanmuSettingBtn == null) return;
-        // 本地行为：有弹幕时显示设置按钮；无弹幕时隐藏并露出搜索入口；
-        // 同时兼容上游弹幕开关（开关关闭时也隐藏）。
+        // 有效弹幕时显示设置按钮；无有效弹幕时隐藏并显示搜索入口。
+        // 同时兼容弹幕总开关（开关关闭时隐藏）。
         mDanmuSettingBtn.setVisibility(hasDanmu && DanmuHelper.isOpen() ? VISIBLE : GONE);
         // 同时保留上游菜单标签可见性刷新，避免按钮状态变化后标签错位。
 
@@ -1212,8 +1212,8 @@ public class VodController extends BaseController {
 
     public void updateDanmuSearchUiBtn() {
         if (mDanmuSearchUiBtn == null) return;
-        // 只有当前没加载到弹幕时，才露出“弹幕搜索”入口，方便用户手动补弹幕。
-        mDanmuSearchUiBtn.setVisibility(!hasDanmu && ApiConfig.get().hasDanmuSearchUi() ? VISIBLE : GONE);
+        // 没有有效弹幕时显示搜索入口；即使当前 Jar 未声明专用搜索 UI，也保留该入口，避免弹幕功能完全消失。
+        mDanmuSearchUiBtn.setVisibility(!hasDanmu ? VISIBLE : GONE);
         updatePlayLabelVisibility();
     }
 

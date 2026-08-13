@@ -171,6 +171,7 @@ public class DanmuLoadController {
                     if (videoView != null) videoView.setDanmuView(danmuView);
                     if (danmuCount <= 0) {
                         LOG.e("echo-danmu empty after parse");
+                        if (controller != null) controller.setHasDanmu(false);
                         danmuView.setVisibility(View.GONE);
                         if (loadCallback != null) {
                             notifyLoadFailed(seq);
@@ -187,6 +188,7 @@ public class DanmuLoadController {
                     danmuView.postDelayed(() -> startIfReady(seq), 1000);
                 } catch (Throwable th) {
                     LOG.e("echo-danmu prepare error: " + th.getMessage());
+                    if (controller != null) controller.setHasDanmu(false);
                     danmuView.setVisibility(View.GONE);
                     notifyLoadFailed(seq);
                 }
