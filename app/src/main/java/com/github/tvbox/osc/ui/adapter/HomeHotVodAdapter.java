@@ -25,6 +25,9 @@ public class HomeHotVodAdapter extends BaseQuickAdapter<Movie.Video, BaseViewHol
     private int defaultWidth;
     private final ImgUtil.Style style;
     private String tvRateValue;
+    // 已应用到容器的尺寸缓存：style 恒定，尺寸不变时跳过重复 setLayoutParams
+    private int appliedStyleW = -1;
+    private int appliedStyleH = -1;
 
     public HomeHotVodAdapter(ImgUtil.Style style, String tvRate) {
         super(R.layout.item_user_hot_vod, new ArrayList<>());
@@ -80,14 +83,17 @@ public class HomeHotVodAdapter extends BaseQuickAdapter<Movie.Video, BaseViewHol
     }
 
     private void applyStyleToImage(final ImageView ivThumb) {
-        if (style != null) {
-            ViewGroup container = (ViewGroup) ivThumb.getParent();
-            int width = defaultWidth;
-            int height = (int) (width / style.ratio);
-            ViewGroup.LayoutParams containerParams = container.getLayoutParams();
-            containerParams.height = AutoSizeUtils.mm2px(mContext, height);
-            containerParams.width = AutoSizeUtils.mm2px(mContext, width);
-            container.setLayoutParams(containerParams);
-        }
+        if (style == null) return;
+        ViewGroup container = (ViewGroup) ivThumb.getParent();
+        int width = AutoSizeUtils.mm2px(mContext, defaultWidth);
+        int height = AutoSizeUtils.mm2px(mContext, (int) (defaultWidth / style.ratio));
+        if (width == appliedStyleW && height == appliedStyleH) return;
+        appliedStyleW = width;
+        appliedStyleH = height;
+        ViewGroup.LayoutParams containerParams = container.getLayoutParams();
+        if (containerParams == null) return;
+        containerParams.height = height;
+        containerParams.width = width;
+        container.setLayoutParams(containerParams);
     }
 }

@@ -20,6 +20,10 @@ public class GridAdapter extends BaseQuickAdapter<Movie.Video, BaseViewHolder> {
     private boolean mShowList;
     private int defaultWidth;
     public ImgUtil.Style style;
+    // 已应用到容器的尺寸缓存：同一 GridAdapter 内 style 恒定，尺寸不变时跳过
+    // 重复 setLayoutParams，避免滚动绑定时每个 item 都触发 requestLayout
+    private int appliedStyleW = -1;
+    private int appliedStyleH = -1;
 
     public GridAdapter(boolean showList, ImgUtil.Style style) {
         super(showList ? R.layout.item_list : R.layout.item_grid, new ArrayList<>());
@@ -94,14 +98,17 @@ public class GridAdapter extends BaseQuickAdapter<Movie.Video, BaseViewHolder> {
     }
 
     private void applyStyleToImage(final ImageView ivThumb) {
-        if (style != null) {
-            ViewGroup container = (ViewGroup) ivThumb.getParent();
-            int width = defaultWidth;
-            int height = (int) (width / style.ratio);
-            ViewGroup.LayoutParams containerParams = container.getLayoutParams();
-            containerParams.height = AutoSizeUtils.mm2px(mContext, height);
-            containerParams.width = AutoSizeUtils.mm2px(mContext, width);
-            container.setLayoutParams(containerParams);
-        }
+        if (style == null) return;
+        ViewGroup container = (ViewGroup) ivThumb.getParent();
+        int width = AutoSizeUtils.mm2px(mContext, defaultWidth);
+        int height = AutoSizeUtils.mm2px(mContext, (int) (defaultWidth / style.ratio));
+        if (width == appliedStyleW && height == appliedStyleH) return;
+        appliedStyleW = width;
+        appliedStyleH = height;
+        ViewGroup.LayoutParams containerParams = container.getLayoutParams();
+        if (containerParams == null) return;
+        containerParams.height = height;
+        containerParams.width = width;
+        container.setLayoutParams(containerParams);
     }
 }
