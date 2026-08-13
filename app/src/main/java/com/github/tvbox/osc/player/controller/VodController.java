@@ -1531,11 +1531,6 @@ public class VodController extends BaseController {
         }
         int keyCode = event.getKeyCode();
         int action = event.getAction();
-        if (action == KeyEvent.ACTION_DOWN && event.getRepeatCount() == 0 && keyCode == KeyEvent.KEYCODE_MENU) {
-            listener.showEpisodeDialog();
-            hideBottom();
-            return true;
-        }
         if (isBottomVisible()) {
             mHandler.removeMessages(1002);
             mHandler.removeMessages(1003);
@@ -1554,7 +1549,7 @@ public class VodController extends BaseController {
                     togglePlay();
                     return true;
                 }
-            } else if (keyCode == KeyEvent.KEYCODE_DPAD_DOWN) {
+            } else if (keyCode == KeyEvent.KEYCODE_DPAD_DOWN || keyCode == KeyEvent.KEYCODE_MENU) {
                 if (!isBottomVisible()) {
                     showBottom();
                     myHandle.postDelayed(myRunnable, myHandleSeconds);
