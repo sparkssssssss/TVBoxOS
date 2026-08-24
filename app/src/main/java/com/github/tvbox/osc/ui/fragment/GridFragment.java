@@ -25,17 +25,20 @@ import com.github.tvbox.osc.bean.MovieSort;
 import com.github.tvbox.osc.event.RefreshEvent;
 import com.github.tvbox.osc.ui.activity.DetailActivity;
 import com.github.tvbox.osc.ui.activity.FastSearchActivity;
+import com.github.tvbox.osc.ui.activity.SearchActivity;
 import com.github.tvbox.osc.ui.adapter.GridAdapter;
 import com.github.tvbox.osc.ui.adapter.GridFilterKVAdapter;
 import com.github.tvbox.osc.ui.dialog.GridFilterDialog;
 import com.github.tvbox.osc.ui.tv.widget.LoadMoreView;
 import com.github.tvbox.osc.ui.tv.widget.TvGridView;
 import com.github.tvbox.osc.util.FastClickCheckUtil;
+import com.github.tvbox.osc.util.HawkConfig;
 import com.github.tvbox.osc.util.ImgUtil;
 import com.github.tvbox.osc.util.LOG;
 import com.github.tvbox.osc.viewmodel.SourceViewModel;
 import com.owen.tvrecyclerview.widget.TvRecyclerView;
 import com.owen.tvrecyclerview.widget.V7GridLayoutManager;
+import com.orhanobut.hawk.Hawk;
 import com.owen.tvrecyclerview.widget.V7LinearLayoutManager;
 
 import java.util.ArrayList;
@@ -133,6 +136,8 @@ public class GridFragment extends BaseLazyFragment {
     public char getUITag(){
         return (sortData == null || sortData.flag == null || sortData.flag.length() ==0 || style!=null) ?  '0' : sortData.flag.charAt(0);
     }
+    // 是否允许聚合搜索 sortData.flag的第二个字符为'1'时允许聚搜
+    public boolean enableFastSearch(){  return sortData.flag == null || sortData.flag.length() < 2 || (sortData.flag.charAt(1) == '1'); }
     // 保存当前页面
     private void saveCurrentView(){
         if(this.mGridView == null) return;
@@ -273,9 +278,17 @@ public class GridFragment extends BaseLazyFragment {
                         }
                     }
                     else{
-                        // 分类项单击进入详情/播放；长按仍为全源聚合搜索。
-                        bundle.putString("picture", video.pic);
-                        jumpActivity(DetailActivity.class, bundle);
+                        // 分类项单击进入详情/播放；msearch: 搜索结果项按上游逻辑进搜索；长按仍为全源聚合搜索。
+                        if (video.id != null && video.id.startsWith("msearch:")) {
+                            if (Hawk.get(HawkConfig.FAST_SEARCH_MODE, true) && enableFastSearch()) {
+                                jumpActivity(FastSearchActivity.class, bundle);
+                            } else {
+                                jumpActivity(SearchActivity.class, bundle);
+                            }
+                        } else {
+                            bundle.putString("picture", video.pic);
+                            jumpActivity(DetailActivity.class, bundle);
+                        }
                     }
 
                 }
@@ -291,7 +304,12 @@ public class GridFragment extends BaseLazyFragment {
                     bundle.putString("id", video.id);
                     bundle.putString("sourceKey", video.sourceKey);
                     bundle.putString("title", video.name);
-                    jumpActivity(FastSearchActivity.class, bundle);
+                    if (video.id != null && video.id.startsWith("msearch:")) {
+                        bundle.putString("picture", video.pic);
+                        jumpActivity(DetailActivity.class, bundle);
+                    } else {
+                        jumpActivity(FastSearchActivity.class, bundle);
+                    }
                 }
                 return true;
             }
