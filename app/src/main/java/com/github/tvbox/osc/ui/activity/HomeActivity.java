@@ -105,14 +105,22 @@ public class HomeActivity extends BaseActivity {
     private final Handler mHandler = new Handler();
     private long mExitTime = 0;
     private boolean eventBusRegistered = false;
+    /** 仅主线程使用，无需考虑线程安全 */
+    private final SimpleDateFormat mTimeFormat = new SimpleDateFormat("yyyy/MM/dd  E  HH:mm", Locale.CHINA);
+    private String mLastTimeText = "";
     private final Runnable mRunnable = new Runnable() {
         @SuppressLint("SetTextI18n")
         @Override
         public void run() {
-            Date date = new Date();
-            SimpleDateFormat timeFormat = new SimpleDateFormat("yyyy/MM/dd  E  HH:mm", Locale.CHINA);
-            tvDate.setText(timeFormat.format(date));
-            mHandler.postDelayed(this, 1000);
+            // 显示只精确到分钟：复用 formatter 并对齐分钟边界调度，避免每秒新建对象造成低端设备 GC 压力。
+            String text = mTimeFormat.format(new Date());
+            if (!text.equals(mLastTimeText)) {
+                mLastTimeText = text;
+                tvDate.setText(text);
+            }
+            long now = System.currentTimeMillis();
+            long nextMinute = (now / 60000L + 1L) * 60000L;
+            mHandler.postDelayed(this, Math.max(250, nextMinute - now + 250));
         }
     };
     private final Runnable refreshTopInfoTextSizeRunnable = new Runnable() {
@@ -130,9 +138,15 @@ public class HomeActivity extends BaseActivity {
             // OnePlus devices may finish applying immersive mode after the first measure.
             // Re-apply the visible top state once the final display metrics are available.
             hideSysBar();
+            int targetMargin = AutoSizeUtils.mm2px(HomeActivity.this, 10.0f);
+            int targetHeight = AutoSizeUtils.mm2px(HomeActivity.this, 50.0f);
             ViewGroup.MarginLayoutParams params = (ViewGroup.MarginLayoutParams) topLayout.getLayoutParams();
-            params.topMargin = AutoSizeUtils.mm2px(HomeActivity.this, 10.0f);
-            params.height = AutoSizeUtils.mm2px(HomeActivity.this, 50.0f);
+            if (params.topMargin == targetMargin && params.height == targetHeight && topLayout.getAlpha() == 1.0f) {
+                // 已处于目标状态：跳过 setLayoutParams/requestLayout，避免打断正在进行的焦点导航。
+                return;
+            }
+            params.topMargin = targetMargin;
+            params.height = targetHeight;
             topLayout.setLayoutParams(params);
             topLayout.setAlpha(1.0f);
             refreshTopInfoTextSize();
