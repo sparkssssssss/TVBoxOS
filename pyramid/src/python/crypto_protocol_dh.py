@@ -18,9 +18,14 @@ def _install():
         if error.name != "Crypto.Protocol.DH":
             raise
 
-    from Crypto.PublicKey import ECC
-    from Crypto.PublicKey.ECC import EccKey
-    from Crypto.Util.number import bytes_to_long, long_to_bytes
+    try:
+        from Crypto.PublicKey import ECC
+        from Crypto.PublicKey.ECC import EccKey
+        from Crypto.Util.number import bytes_to_long, long_to_bytes
+    except Exception:
+        # 环境中的 pycryptodome 过旧（< 3.4，无 ECC 支持），无法提供 ECDH 兼容层；
+        # 降级为 no-op，避免 import 失败导致 app.py 启动崩溃。
+        return
 
     if not hasattr(EccKey, "_export_SEC1"):
         export_key = EccKey.export_key

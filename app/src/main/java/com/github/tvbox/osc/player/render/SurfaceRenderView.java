@@ -79,7 +79,8 @@ public class SurfaceRenderView extends SurfaceView implements IRenderView, Surfa
 
     @Override
     public void release() {
-
+        // 置空播放器引用：VideoView.release() 移除视图后 surfaceDestroyed 异步触发时不再对已释放播放器调 setDisplay。
+        mMediaPlayer = null;
     }
 
     @Override
@@ -91,21 +92,30 @@ public class SurfaceRenderView extends SurfaceView implements IRenderView, Surfa
     @Override
     public void surfaceCreated(SurfaceHolder holder) {
         if (mMediaPlayer != null) {
-            mMediaPlayer.setDisplay(holder);
+            try {
+                mMediaPlayer.setDisplay(holder);
+            } catch (Throwable ignored) {
+            }
         }
     }
 
     @Override
     public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
         if (mMediaPlayer != null) {
-            mMediaPlayer.setDisplay(holder);
+            try {
+                mMediaPlayer.setDisplay(holder);
+            } catch (Throwable ignored) {
+            }
         }
     }
 
     @Override
     public void surfaceDestroyed(SurfaceHolder holder) {
         if (mMediaPlayer != null) {
-            mMediaPlayer.setDisplay(null);
+            try {
+                mMediaPlayer.setDisplay(null);
+            } catch (Throwable ignored) {
+            }
         }
     }
 }

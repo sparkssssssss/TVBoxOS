@@ -908,8 +908,16 @@ public class FastSearchActivity extends BaseActivity {
     private void finishSearchIfDone() {
         if (allRunCount.get() > 0) return;
         searchPaused = false;
+        if (searchAdapter.getData().size() == 0 && !resultVods.isEmpty()) {
+            // 仅有松散命中（非精确/非前缀）时兜底展示全部结果，避免空态悬空。
+            List<Movie.Video> fallback = new ArrayList<>();
+            for (ArrayList<Movie.Video> list : resultVods.values()) {
+                if (list != null && !list.isEmpty()) fallback.addAll(list);
+            }
+            addMainSearchResults(fallback);
+        }
         updateSearchStatus();
-        if (searchAdapter.getData().size() == 0 && resultVods.isEmpty()) {
+        if (searchAdapter.getData().size() == 0) {
             showEmpty();
         }
         cancel();
